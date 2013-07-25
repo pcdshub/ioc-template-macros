@@ -38,7 +38,7 @@ def read_config(file):
             # names, and also add the full names to the main dictionary.
             dd = {}
             n = str(len(allinst))
-            dd["N"] = n
+            dd["INDEX"] = n
             while (params != ""):
                 m = prmeqqq.search(params)
                 if m == None:
@@ -90,7 +90,7 @@ def expand(ddict, idict, lines, f):
     i = 0
     lp = re.compile("^\$\$LOOP\((.*)\)$")
     dd = re.compile("^(.*?)\$\$")
-    tr = re.compile('^TR\((.*?),"(.*?)","(.*?)"\)')
+    tr = re.compile('^TRANSLATE\((.*?),"(.*?)","(.*?)"\)')
     paren = re.compile("^\((.*?)\)")
     word = re.compile("^([A-Za-z0-9_]*)")
     while i < len(lines):
@@ -127,7 +127,7 @@ def expand(ddict, idict, lines, f):
             continue
         f.write(m.group(1))
         lines[i] = lines[i][m.end(1)+2:len(lines[i])]
-        if lines[i][0:3] == "TR(":
+        if lines[i][0:10] == "TRANSLATE(":
             m = tr.search(lines[i])
             if m != None:
                 try:
@@ -137,7 +137,7 @@ def expand(ddict, idict, lines, f):
                     pass
                 lines[i] = lines[i][m.end(3)+2: len(lines[i])]
             else:
-                print "Malformed $$TR?"
+                print "Malformed $$TRANSLATE?"
         else:
             if lines[i][0] == "(":
                 m = paren.search(lines[i])
