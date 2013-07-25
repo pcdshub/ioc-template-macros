@@ -4,7 +4,7 @@ import sys
 import re
 import string
 
-def read_config(file):
+def read_config(file, extra):
     d = {}
     i = {}
     d["DIRNAME"] = os.getcwd().split('/')[-1]
@@ -12,7 +12,7 @@ def read_config(file):
         fp = open(file)
     except:
         fp = open("../" + file)
-    lines = fp.readlines()
+    lines = extra + fp.readlines()
     fp.close()
     eq      = re.compile("^([A-Za-z0-9_]*)=(.*)$")
     eqq     = re.compile('^([A-Za-z0-9_]*)="(.*)"$')
@@ -159,9 +159,9 @@ def expand(ddict, idict, lines, f):
 if __name__ == '__main__':
     av = sys.argv;
     if len(av) < 3:
-        print "Usage: expand.py TEMPLATE OUTFILE"
+        print "Usage: expand.py TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
         sys.exit(1)
-    config=read_config("config")
+    config=read_config("config", sys.argv[3:])
     lines=open(sys.argv[1]).readlines()
     lines=[l.strip() for l in lines]
     fp = open(sys.argv[2], 'w')
