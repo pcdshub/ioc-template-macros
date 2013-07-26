@@ -2,17 +2,26 @@ All of the macro commands in the template files begin with "$$".  These can be:
     $$VAR or $$(VAR)
 	- VAR is a variable name that is evaluated and inserted.
     $$DIRNAME
-	- A special variable name that is the current directory name.
-    $LOOP(INST)
-    Body
-    $LOOP(INST)
+	- A special variable name that is the current directory name. (Not the
+	  whole path!)
+    $$LOOP(INST)loop-body$$ENDLOOP(INST)
 	- INST is the name of an instantiation from the config file.  The
 	  macro processor loops over all of the named instantiation, and
-	  inserts a copy of the Body with the variable replacements using
+	  inserts a copy of the loop-body with the variable replacements using
 	  the parameters of the particular instance.
-    $TRANSLATE(VAR, "STR1", "STR2")
+    $$TRANSLATE(VAR, "STR1", "STR2")
 	- VAR is a variable name that is evaluated and then has all of the
 	  characters in STR1 replaced by the corresponding characters in STR2.
+	  The double-quotes are manditory!
+    $$IF(VAR)
+    if-body
+    $$ELSE(VAR)
+    else-body
+    $$ENDIF(VAR)
+        - A simple conditional.  The $$ELSE and else-body are optional.  If the
+	  value of VAR is not "", expand the if-body, otherwise expand the else-body.
+    $$INCLUDE(FILENAME)
+        - Process the contents of the FILENAME.
 
 Configuration files are rather fussy, in that whitespace can only appear within
 value strings and comments.  If a line starts with '#', it is a comment that runs
