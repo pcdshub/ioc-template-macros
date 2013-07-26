@@ -196,10 +196,14 @@ def expand(cfg, lines, f):
                     loc = t[2]
                 elif m.group(1) == "INCLUDE":
                     try:
-                        newlines=open(argm.group(1)).readlines()
+                        fn = cfg.ddict[argm.group(1)]
+                    except:
+                        fn = argm.group(1)
+                    try:
+                        newlines=open(fn).readlines()
                         expand(cfg, newlines, fp)
                     except:
-                        print "Cannot open file %s!" % m.group(1)
+                        print "Cannot open file %s!" % fn
                 else: # Must be "TRANSLATE"
                     try:
                         val = cfg.ddict[argm.group(1)].translate(string.maketrans(argm.group(2), argm.group(3)))
