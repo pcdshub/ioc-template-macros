@@ -128,13 +128,12 @@ def expand(cfg, lines, f):
 
         # Write the first part
         f.write(m.group(1))
-        loc += m.end(1) + 2
-        print "Found $$: '%s'" % lines[i][loc:]
+        pos = loc + m.end(1)     # save where we found this!
+        loc = pos + 2            # skip the '$$'!
 
         m = cfg.keyword.search(lines[i][loc:])
         if m != None:
             loc += m.end(1)      # Leave on the '('!
-            print "Found keyword in '%s'" % lines[i][loc:]
             if m.group(1) == "TRANSLATE":
                 argm = cfg.trargs.search(lines[i][loc:])
                 if argm != None:
@@ -143,8 +142,11 @@ def expand(cfg, lines, f):
                 argm = cfg.parens.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(1)+1
+                if pos == 0 and lines[i][loc:].strip() == "":
+                    # If the $$ directive is the entire line, don't add a newline!
+                    loc = 0;
+                    i += 1
             if argm != None:
-                print "Stripped off arguments leaving '%s'" % lines[i][loc:]
                 if m.group(1) == "LOOP":
                     iname = argm.group(1)
                     endloop = re.compile("(.*?)\$\$ENDLOOP\(" + iname + "(\))")
@@ -173,8 +175,6 @@ def expand(cfg, lines, f):
                         print "Cannot find $$ENDIF(%s)?" % iname
                         sys.exit(1)
                     elset = searchforend(t[0], elsere, 0, 0)
-                    print t
-                    print elset
                     try:
                         v = cfg.ddict[iname]
                     except:
@@ -202,7 +202,7 @@ def expand(cfg, lines, f):
                         print "Cannot open file %s!" % m.group(1)
                 else: # Must be "TRANSLATE"
                     try:
-                        val = ddict[argm.group(1)].translate(string.maketrans(argm.group(2), argm.group(3)))
+                        val = cfg.ddict[argm.group(1)].translate(string.maketrans(argm.group(2), argm.group(3)))
                         f.write(val)
                     except:
                         pass
