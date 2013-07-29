@@ -149,7 +149,7 @@ def expand(cfg, lines, f):
                 argm = cfg.ifargs.search(lines[i][loc:])
                 if argm != None:
                     kw = "TIF"    # Triple IF!
-                    loc += argm.end(3)+2
+                    loc += argm.end(3)+1
                 else:
                     argm = cfg.parens.search(lines[i][loc:])
                     if argm != None:
