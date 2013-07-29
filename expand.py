@@ -91,8 +91,9 @@ class config():
         # Pre-define some regular expressions!
         self.doubledollar = re.compile("^(.*?)\$\$")
         self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE)\(")
-        self.parens       = re.compile("^\((.*?)\)")
-        self.trargs       = re.compile('^\((.*?),"(.*?)","(.*?)"\)')
+        self.parens       = re.compile("^\(([^)]*?)\)")
+        self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
+        self.ifargs       = re.compile('^\(([^,]*?),([^,]*?),([^)]*?)\)')
         self.word         = re.compile("^([A-Za-z0-9_]*)")
 
 # Fine the endre in the lines starting at index i, offset l.
@@ -110,7 +111,12 @@ def searchforend(lines, endre, i, l):
             loc = 0
         else:
             newlines.append(endm.group(1))
+            pos = loc
             loc += endm.end(2)
+            if pos == 0 and lines[j][loc:].strip() == "":
+                # If the $$ directive is the entire line, don't add a newline!
+                loc = 0;
+                j += 1
             return (newlines, j, loc)
     return None
 
@@ -134,10 +140,24 @@ def expand(cfg, lines, f):
         m = cfg.keyword.search(lines[i][loc:])
         if m != None:
             loc += m.end(1)      # Leave on the '('!
-            if m.group(1) == "TRANSLATE":
+            kw = m.group(1)
+            if kw == "TRANSLATE":
                 argm = cfg.trargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+2
+            elif kw == "IF":
+                argm = cfg.ifargs.search(lines[i][loc:])
+                if argm != None:
+                    kw = "TIF"    # Triple IF!
+                    loc += argm.end(3)+2
+                else:
+                    argm = cfg.parens.search(lines[i][loc:])
+                    if argm != None:
+                        loc += argm.end(1)+1
+                    if pos == 0 and lines[i][loc:].strip() == "":
+                        # If the $$ directive is the entire line, don't add a newline!
+                        loc = 0;
+                        i += 1
             else:
                 argm = cfg.parens.search(lines[i][loc:])
                 if argm != None:
@@ -147,7 +167,7 @@ def expand(cfg, lines, f):
                     loc = 0;
                     i += 1
             if argm != None:
-                if m.group(1) == "LOOP":
+                if kw == "LOOP":
                     iname = argm.group(1)
                     endloop = re.compile("(.*?)\$\$ENDLOOP\(" + iname + "(\))")
                     t = searchforend(lines, endloop, i, loc)
@@ -166,7 +186,7 @@ def expand(cfg, lines, f):
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]
-                elif m.group(1) == "IF":
+                elif kw == "IF":
                     iname = argm.group(1)
                     endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
                     elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
@@ -194,7 +214,21 @@ def expand(cfg, lines, f):
                             expand(cfg, newlines, f)
                     i = t[1]
                     loc = t[2]
-                elif m.group(1) == "INCLUDE":
+                elif kw == "TIF":
+                    iname = argm.group(1)
+                    newlines = []
+                    try:
+                        v = cfg.ddict[iname]
+                    except:
+                        v = ""
+                    if v != "":
+                        # True, do the if!
+                        newlines.append(argm.group(2))
+                    else:
+                        # False, do the else!
+                        newlines.append(argm.group(3))
+                    expand(cfg, newlines, f)
+                elif kw == "INCLUDE":
                     try:
                         fn = cfg.ddict[argm.group(1)]
                     except:
@@ -211,7 +245,7 @@ def expand(cfg, lines, f):
                     except:
                         pass
             else:
-                print "Malformed $$%s statement?" % m.group(1)
+                print "Malformed $$%s statement?" % kw
                 sys.exit(1)
             continue
         
