@@ -4,6 +4,8 @@ All of the macro commands in the template files begin with "$$".  These can be:
     $$DIRNAME
 	- A special variable name that is the current directory name. (Not the
 	  whole path!)
+    $$COUNT(INST)
+	- How many instantiations of INST are there.
     $$LOOP(INST)loop-body$$ENDLOOP(INST)
 	- INST is the name of an instantiation from the config file.  The
 	  macro processor loops over all of the named instantiation, and
@@ -25,6 +27,13 @@ All of the macro commands in the template files begin with "$$".  These can be:
 	  where neither body includes a comma.
     $$INCLUDE(FILENAME)
         - Process the contents of the FILENAME.
+    $$CALC{EXPRESSION} or $$CALC{EXPRESSION,FORMAT}
+	- NOTE THE BRACKETS!!!  This allows arbitrary arithmetic.  The EXPRESSION
+	  is expanded, and then evaluated as a mathematical expression.  Any 
+	  undefined atom is assumed to be zero.  Atoms within the expression do 
+	  not need to be prefixed by $$, but maybe.  (They should be if within a
+	  $$LOOP inside the expression.)  The result is output as a decimal number,
+	  or using the given format if one was given.
 
 Configuration files are rather fussy, in that whitespace can only appear within
 value strings and comments.  If a line starts with '#', it is a comment that runs

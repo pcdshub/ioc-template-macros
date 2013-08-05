@@ -3,6 +3,9 @@ import os
 import sys
 import re
 import string
+import ast
+import operator
+import StringIO
 
 class config():
     def __init__(self, file, extra):
@@ -90,11 +93,41 @@ class config():
 
         # Pre-define some regular expressions!
         self.doubledollar = re.compile("^(.*?)\$\$")
-        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE)\(")
+        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|(CALC)\{")
         self.parens       = re.compile("^\(([^)]*?)\)")
+        self.brackets     = re.compile("^\{([^}]*?)\}")
         self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
         self.ifargs       = re.compile('^\(([^,]*?),([^,]*?),([^)]*?)\)')
         self.word         = re.compile("^([A-Za-z0-9_]*)")
+        self.operators = {ast.Add: operator.add,
+                          ast.Sub: operator.sub,
+                          ast.Mult: operator.mul,
+                          ast.Div: operator.truediv,
+                          ast.Pow: operator.pow,
+                          ast.LShift : operator.lshift,
+                          ast.RShift: operator.rshift,
+                          ast.BitOr: operator.or_,
+                          ast.BitAnd : operator.and_,
+                          ast.BitXor: operator.xor}
+
+    def eval_expr(self, expr):
+        return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])
+
+    def eval_(self, node):
+        if isinstance(node, ast.Num):
+            return node.n
+        elif isinstance(node, ast.Name):
+            try:
+                x = int(self.ddict[node.id])
+            except:
+                x = 0
+            return x
+        elif isinstance(node, ast.operator):
+            return self.operators[type(node)]
+        elif isinstance(node, ast.BinOp):
+            return self.eval_(node.op)(self.eval_(node.left), self.eval_(node.right))
+        else:
+            raise TypeError(node)
 
 # Fine the endre in the lines starting at index i, offset l.
 # Return a tuple: (newlines, newi, newloc), or
@@ -139,12 +172,21 @@ def expand(cfg, lines, f):
 
         m = cfg.keyword.search(lines[i][loc:])
         if m != None:
-            loc += m.end(1)      # Leave on the '('!
             kw = m.group(1)
+            if kw == None:
+                kw = m.group(2)
+                loc += m.end(2)      # Leave on the '{'!
+            else:
+                loc += m.end(1)      # Leave on the '('!
+            
             if kw == "TRANSLATE":
                 argm = cfg.trargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+2
+            elif kw == "CALC":
+                argm = cfg.brackets.search(lines[i][loc:])
+                if argm != None:
+                    loc += argm.end(1)+1
             elif kw == "IF":
                 argm = cfg.ifargs.search(lines[i][loc:])
                 if argm != None:
@@ -166,6 +208,7 @@ def expand(cfg, lines, f):
                     # If the $$ directive is the entire line, don't add a newline!
                     loc = 0;
                     i += 1
+                    
             if argm != None:
                 if kw == "LOOP":
                     iname = argm.group(1)
@@ -235,9 +278,31 @@ def expand(cfg, lines, f):
                         fn = argm.group(1)
                     try:
                         newlines=open(fn).readlines()
-                        expand(cfg, newlines, fp)
+                        expand(cfg, newlines, f)
                     except:
                         print "Cannot open file %s!" % fn
+                elif kw == "COUNT":
+                    try:
+                        cnt = str(len(cfg.idict[argm.group(1)]))
+                    except:
+                        cnt = "0"
+                    f.write(cnt)
+                elif kw == "CALC":
+                    # Either $$CALC{expr} or $$CALC{expr,format}.
+                    args = argm.group(1).split(",")
+                    output = StringIO.StringIO()
+                    expand(cfg, [args[0]], output)
+                    value = output.getvalue()
+                    output.close()
+                    if len(args) > 1:
+                        fmt = args[1]
+                    else:
+                        fmt = "%d"
+                    try:
+                        v = cfg.eval_expr(value)
+                    except:
+                        v = 0
+                    f.write(fmt % (v))
                 else: # Must be "TRANSLATE"
                     try:
                         val = cfg.ddict[argm.group(1)].translate(string.maketrans(argm.group(2), argm.group(3)))
