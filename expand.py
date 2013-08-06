@@ -7,15 +7,31 @@ import ast
 import operator
 import StringIO
 
+expand_path = []
+
+def myopen(file):
+    try:
+        fp = open(file)
+        return fp
+    except:
+        pass
+    if file[0] == '/':
+        return None
+    for f in expand_path:
+        fn = f + "/" + file
+        try:
+            fp = open(fn)
+            return fp
+        except:
+            pass
+    return None
+
 class config():
     def __init__(self, file, extra):
         d = {}
         i = {}
         d["DIRNAME"] = os.getcwd().split('/')[-1]
-        try:
-            fp = open(file)
-        except:
-            fp = open("../" + file)
+        fp = myopen(file)
         lines = extra + fp.readlines()
         fp.close()
         eq      = re.compile("^([A-Za-z0-9_]*)=(.*)$")
@@ -277,7 +293,7 @@ def expand(cfg, lines, f):
                     except:
                         fn = argm.group(1)
                     try:
-                        newlines=open(fn).readlines()
+                        newlines=myopen(fn).readlines()
                         expand(cfg, newlines, f)
                     except:
                         print "Cannot open file %s!" % fn
@@ -333,12 +349,17 @@ def expand(cfg, lines, f):
             print "Can't find variable name?!?"
 
 if __name__ == '__main__':
+    xp = os.getenv("EXPAND_PATH")
+    if xp == None:
+        expand_path = [".."]
+    else:
+        expand_path = xp.split(":") + [".."]
     av = sys.argv;
     if len(av) < 3:
         print "Usage: expand.py TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
         sys.exit(1)
     cfg=config("config", sys.argv[3:])
-    lines=open(sys.argv[1]).readlines()
+    lines=myopen(sys.argv[1]).readlines()
     fp = open(sys.argv[2], 'w')
     expand(cfg, lines, fp)
     sys.exit(0)
