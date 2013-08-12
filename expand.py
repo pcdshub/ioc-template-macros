@@ -109,7 +109,7 @@ class config():
 
         # Pre-define some regular expressions!
         self.doubledollar = re.compile("^(.*?)\$\$")
-        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|(CALC)\{")
+        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
         self.parens       = re.compile("^\(([^)]*?)\)")
         self.brackets     = re.compile("^\{([^}]*?)\}")
         self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
