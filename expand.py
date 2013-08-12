@@ -233,10 +233,17 @@ def expand(cfg, lines, f):
                     if t == None:
                         print "Cannot find $$ENDLOOP(%s)?" % iname
                         sys.exit(1)
-                    try:
-                        ilist = cfg.idict[iname]
-                    except:
-                        ilist = []
+                    if iname[0] >= "0" and iname[0] <= "9":
+                        try:
+                            cnt = int(iname)
+                        except:
+                            cnt = 0
+                        ilist = [{"INDEX": str(n)} for n in range(cnt)]
+                    else:
+                        try:
+                            ilist = cfg.idict[iname]
+                        except:
+                            ilist = []
                     olddict = cfg.ddict
                     for inst in ilist:
                         cfg.ddict = olddict.copy()

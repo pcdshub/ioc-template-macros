@@ -11,6 +11,9 @@ All of the macro commands in the template files begin with "$$".  These can be:
 	  macro processor loops over all of the named instantiation, and
 	  inserts a copy of the loop-body with the variable replacements using
 	  the parameters of the particular instance.
+    $$LOOP(N)loop-body$$ENDLOOP(N)
+	- N is an integer.  This will expand the loop-body N times, with $$INDEX
+	  ranging from 0 to N-1.
     $$TRANSLATE(VAR, "STR1", "STR2")
 	- VAR is a variable name that is evaluated and then has all of the
 	  characters in STR1 replaced by the corresponding characters in STR2.
