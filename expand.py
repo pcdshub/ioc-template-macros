@@ -113,7 +113,7 @@ class config():
         self.parens       = re.compile("^\(([^)]*?)\)")
         self.brackets     = re.compile("^\{([^}]*?)\}")
         self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
-        self.ifargs       = re.compile('^\(([^,]*?),([^,]*?),([^)]*?)\)')
+        self.ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
         self.word         = re.compile("^([A-Za-z0-9_]*)")
         self.operators = {ast.Add: operator.add,
                           ast.Sub: operator.sub,
