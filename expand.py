@@ -239,11 +239,17 @@ def expand(cfg, lines, f):
                         except:
                             cnt = 0
                         ilist = [{"INDEX": str(n)} for n in range(cnt)]
-                    else:
+                    elif iname in cfg.idict.keys():
                         try:
                             ilist = cfg.idict[iname]
                         except:
                             ilist = []
+                    else:
+                        try:
+                            cnt = int(cfg.ddict[iname])
+                        except:
+                            cnt = 0
+                        ilist = [{"INDEX": str(n)} for n in range(cnt)]
                     olddict = cfg.ddict
                     for inst in ilist:
                         cfg.ddict = olddict.copy()
