@@ -158,23 +158,63 @@ class config():
         else:
             raise TypeError(node)
 
-# Fine the endre in the lines starting at index i, offset l.
-# Return a tuple: (newlines, newi, newloc), or
-# None if it wasn't found.
-def searchforend(lines, endre, i, l):
+# Find the endre in the lines starting at index i, offset l.
+# However, lb and rb are regular expressions that denote a region to be skipped.
+# Note that endre might be equal to rb!
+# Return a tuple: (newlines, newi, newloc), or None if it wasn't found.
+def searchforend(lines, endre, lb, rb, i, l):
     j = i
     loc = l
+    nest = 0
     newlines = []
     while j < len(lines):
-        endm = endre.search(lines[j][loc:])
-        if endm == None:
+        #
+        # Looking at lines[j][loc:]!
+        #
+        lbm = lb.search(lines[j][loc:])
+        if lbm != None:
+            lbp = lbm.end(2)
+        else:
+            lbp = 100000
+        if nest != 0:
+            endm = rb.search(lines[j][loc:])
+        else:
+            endm = endre.search(lines[j][loc:])
+        if endm != None:
+            endp = endm.end(2)
+        else:
+            endp = 100000
+
+        if lbp == 100000 and endp == 100000:
+            # Nothing here!
             newlines.append(lines[j][loc:])
             j += 1
             loc = 0
+            continue;
+        if lbp < endp:
+            # Found a new start!
+            nest = nest + 1
+            pos = loc
+            loc += lbp
+            if pos == 0 and lines[j][loc] == '\n':
+                loc += 1
+            newlines.append(lines[j][pos:loc])
+            continue;
         else:
+            # Found the end, either rb or endre!
+            if nest != 0:
+                # Must have been rb, close it out and continue.
+                nest = nest - 1
+                pos = loc
+                loc += endp
+                if pos == 0 and lines[j][loc] == '\n':
+                    loc += 1
+                newlines.append(lines[j][pos:loc])
+                continue;
+            # We're really done.  Strip off what we were looking for.
             newlines.append(endm.group(1))
             pos = loc
-            loc += endm.end(2)
+            loc += endp
             if pos == 0 and lines[j][loc:].strip() == "":
                 # If the $$ directive is the entire line, don't add a newline!
                 loc = 0;
@@ -259,8 +299,9 @@ def expand(cfg, lines, f):
             if argm != None:
                 if kw == "LOOP":
                     iname = argm.group(1)
+                    startloop = re.compile("(.*?)\$\$LOOP\(" + iname + "(\))")
                     endloop = re.compile("(.*?)\$\$ENDLOOP\(" + iname + "(\))")
-                    t = searchforend(lines, endloop, i, loc)
+                    t = searchforend(lines, endloop, startloop, endloop, i, loc)
                     if t == None:
                         print "Cannot find $$ENDLOOP(%s)?" % iname
                         sys.exit(1)
@@ -291,13 +332,14 @@ def expand(cfg, lines, f):
                     loc = t[2]
                 elif kw == "IF":
                     iname = argm.group(1)
+                    ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
                     endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
                     elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
-                    t = searchforend(lines, endre, i, loc)
+                    t = searchforend(lines, endre, ifre, endre, i, loc)
                     if t == None:
                         print "Cannot find $$ENDIF(%s)?" % iname
                         sys.exit(1)
-                    elset = searchforend(t[0], elsere, 0, 0)
+                    elset = searchforend(t[0], elsere, ifre, endre, 0, 0)
                     try:
                         v = cfg.ddict[iname]
                     except:
