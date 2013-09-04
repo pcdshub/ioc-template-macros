@@ -27,13 +27,44 @@ def myopen(file):
     return None
 
 class config():
-    def __init__(self, file, extra):
-        d = {}
-        i = {}
-        d["DIRNAME"] = os.getcwd().split('/')[-1]
+    def __init__(self):
+        self.ddict = {"DIRNAME": os.getcwd().split('/')[-1]}
+        self.idict = {}
+
+        # Pre-define some regular expressions!
+        self.doubledollar = re.compile("^(.*?)\$\$")
+        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+        self.parens       = re.compile("^\(([^)]*?)\)")
+        self.brackets     = re.compile("^\{([^}]*?)\}")
+        self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
+        self.ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
+        self.word         = re.compile("^([A-Za-z0-9_]*)")
+        self.operators = {ast.Add: operator.add,
+                          ast.Sub: operator.sub,
+                          ast.Mult: operator.mul,
+                          ast.Div: operator.truediv,
+                          ast.Pow: operator.pow,
+                          ast.LShift : operator.lshift,
+                          ast.RShift: operator.rshift,
+                          ast.BitOr: operator.or_,
+                          ast.BitAnd : operator.and_,
+                          ast.BitXor: operator.xor}
+
+    def read_config(self, file, extra):
         fp = myopen(file)
         lines = extra + fp.readlines()
         fp.close()
+
+        # Expand the config!!!
+        output = StringIO.StringIO()
+        expand(self, lines, output)
+        value = output.getvalue()
+        output.close()
+        lines = value.split("\n")
+
+        i = self.idict
+        d = self.ddict
+
         eq      = re.compile("^([A-Za-z0-9_]*)=(.*)$")
         eqq     = re.compile('^([A-Za-z0-9_]*)="(.*)"$')
         eqqq    = re.compile("^([A-Za-z0-9_]*)='(.*)'$")
@@ -104,27 +135,9 @@ class config():
                 continue
             if l != "" and l[0] != '#':
                 print "Skipping unknown line: %s" % l
-        self.ddict = d
         self.idict = i
+        self.ddict = d
 
-        # Pre-define some regular expressions!
-        self.doubledollar = re.compile("^(.*?)\$\$")
-        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
-        self.parens       = re.compile("^\(([^)]*?)\)")
-        self.brackets     = re.compile("^\{([^}]*?)\}")
-        self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
-        self.ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
-        self.word         = re.compile("^([A-Za-z0-9_]*)")
-        self.operators = {ast.Add: operator.add,
-                          ast.Sub: operator.sub,
-                          ast.Mult: operator.mul,
-                          ast.Div: operator.truediv,
-                          ast.Pow: operator.pow,
-                          ast.LShift : operator.lshift,
-                          ast.RShift: operator.rshift,
-                          ast.BitOr: operator.or_,
-                          ast.BitAnd : operator.and_,
-                          ast.BitXor: operator.xor}
 
     def eval_expr(self, expr):
         return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])
@@ -168,6 +181,24 @@ def searchforend(lines, endre, i, l):
                 j += 1
             return (newlines, j, loc)
     return None
+
+def rename_index(d):
+    idxre = re.compile("^INDEX([0-9]*)")
+    new = []
+    val = []
+    for k in d.keys():
+        m = idxre.search(k)
+        if m != None:
+            arg = m.group(1)
+            if arg == '':
+                new.append("INDEX1")
+            else:
+                new.append("INDEX%d" % (int(arg) + 1))
+            val.append(d[k])
+            del d[k]
+    for i in range(len(new)):
+        d[new[i]] = val[i]
+    return d
 
 def expand(cfg, lines, f):
     i = 0
@@ -252,7 +283,7 @@ def expand(cfg, lines, f):
                         ilist = [{"INDEX": str(n)} for n in range(cnt)]
                     olddict = cfg.ddict
                     for inst in ilist:
-                        cfg.ddict = olddict.copy()
+                        cfg.ddict = rename_index(olddict.copy())
                         cfg.ddict.update(inst)
                         expand(cfg, t[0], f)
                     cfg.ddict = olddict
@@ -371,8 +402,10 @@ if __name__ == '__main__':
     if len(av) < 3:
         print "Usage: expand.py TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
         sys.exit(1)
-    cfg=config("config", sys.argv[3:])
+    cfg=config()
+    cfg.read_config("config", sys.argv[3:])
     lines=myopen(sys.argv[1]).readlines()
     fp = open(sys.argv[2], 'w')
     expand(cfg, lines, fp)
+    fp.close()
     sys.exit(0)
