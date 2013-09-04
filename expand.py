@@ -52,7 +52,7 @@ class config():
 
     def read_config(self, file, extra):
         fp = myopen(file)
-        lines = extra + fp.readlines()
+        lines = [l + "\n" for l in extra] + fp.readlines()
         fp.close()
 
         # Expand the config!!!
