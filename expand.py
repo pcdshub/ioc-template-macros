@@ -458,12 +458,19 @@ if __name__ == '__main__':
         expand_path = xp.split(":") + [".."]
     av = sys.argv;
     if len(av) < 3:
+        if len(av) == 2:
+            cfg=config()
+            cfg.read_config("config", [])
+            lines=['$$' + av[1] + '\n']
+            expand(cfg, lines, sys.stdout)
+            sys.exit(0)
         print "Usage: expand.py TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
+        print "   or: expand.py NAME"
         sys.exit(1)
     cfg=config()
-    cfg.read_config("config", sys.argv[3:])
-    lines=myopen(sys.argv[1]).readlines()
-    fp = open(sys.argv[2], 'w')
+    cfg.read_config("config", av[3:])
+    lines=myopen(av[1]).readlines()
+    fp = open(av[2], 'w')
     expand(cfg, lines, fp)
     fp.close()
     sys.exit(0)
