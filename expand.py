@@ -64,13 +64,15 @@ class config():
 
         i = self.idict
         d = self.ddict
+        nd = {}
 
-        eq      = re.compile("^([A-Za-z0-9_]*)=(.*)$")
-        eqq     = re.compile('^([A-Za-z0-9_]*)="(.*)"$')
-        eqqq    = re.compile("^([A-Za-z0-9_]*)='(.*)'$")
-        inst    = re.compile("^([A-Za-z0-9_]*)\((.*)\)$")
+        eq      = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*([^ \t]*)[ \t]*$")
+        eqq     = re.compile('^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*"(.*)"[ \t]*$')
+        eqqq    = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*'(.*)'[ \t]*$")
+        inst    = re.compile("^[ \t]*(([A-Za-z0-9_]*):[ \t]*)?([A-Za-z0-9_]*)\((.*)\)[ \t]*$")
 
-        prminst = re.compile("^([A-Za-z_]*)([0-9_]*)(,)")
+        prminst = re.compile("^([A-Za-z0-9_]*)(,)")
+        prmidx  = re.compile("^([A-Za-z_]*)([0-9_]*)(,)")
         prmeq   = re.compile("^([A-Za-z0-9_]*)=([^,]*)(,)")
         prmeqq  = re.compile('^([A-Za-z0-9_]*)="([^"]*)"(,)')
         prmeqqq = re.compile("^([A-Za-z0-9_]*)='([^']*)'(,)")
@@ -78,8 +80,9 @@ class config():
             l = l.strip()
             m = inst.search(l)
             if m != None:
-                iname = m.group(1)
-                params = m.group(2) + ","
+                id = m.group(2)
+                iname = m.group(3)
+                params = m.group(4) + ","
                 try:
                     allinst = i[iname]
                 except:
@@ -107,21 +110,35 @@ class config():
                     else:
                         m = prminst.search(params)
                         if m != None:
-                            # Parameter of the form INSTn.  Find the instance, and
-                            # add all of its named parameters VAL with the name
-                            # INSTVAL.
-                            useinst = m.group(1)
-                            usenum = int(m.group(2))
+                            # This is an instance parameter.  It is either old-style,
+                            # INSTn, or an arbitrary name.  Check the name dict first!
+                            try:
+                                t = nd[m.group(1)]
+                                useinst = t[0]
+                                usenum = t[1]
+                                params = params[m.end(2):len(params)]
+                            except:
+                                m = prmidx.search(params)
+                                if m == None:
+                                    print "Unknown parameter in line %s" % params
+                                    params = ""
+                                    continue
+                                useinst = m.group(1)
+                                usenum = int(m.group(2))
+                                params = params[m.end(3):len(params)]
+                            # Find the instance, and add all of its named parameters
+                            # VAL with the name INSTVAL.
                             used = i[useinst][usenum]
                             for k in used.keys():
                                 var = useinst + k
                                 val = used[k]
                                 dd[var] = val
-                            params = params[m.end(3):len(params)]
                         else:
                             print "Unknown parameter in line %s" % params
                             params = ""
                 i[iname].append(dd)
+                if id != None:
+                    nd[id] = (iname, int(n))
                 continue
             m = eqqq.search(l)
             if m == None:
@@ -137,7 +154,6 @@ class config():
                 print "Skipping unknown line: %s" % l
         self.idict = i
         self.ddict = d
-
 
     def eval_expr(self, expr):
         return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])
