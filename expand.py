@@ -66,7 +66,7 @@ class config():
         d = self.ddict
         nd = {}
 
-        eq      = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*([^ \t]*)[ \t]*$")
+        eq      = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
         eqq     = re.compile('^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*"(.*)"[ \t]*$')
         eqqq    = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*'(.*)'[ \t]*$")
         inst    = re.compile("^[ \t]*(([A-Za-z0-9_]*):[ \t]*)?([A-Za-z0-9_]*)\((.*)\)[ \t]*$")
