@@ -54,8 +54,8 @@ expandAll: $(TEMPS) $(EXPAND) config
 clean realclean:: expandclean
 
 expandclean:
-	-rm $(IOC).sub-arch $(IOC).sub-req st.cmd envPaths make.log
-	-rm *~
+	-rm -f $(IOC).sub-arch $(IOC).sub-req st.cmd envPaths make.log
+	-rm -f *~
 
 include $(TOP)/configure/RULES
 include $(TOP)/configure/RULES.ioc-targets
