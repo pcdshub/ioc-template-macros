@@ -456,21 +456,31 @@ if __name__ == '__main__':
         expand_path = [".."]
     else:
         expand_path = xp.split(":") + [".."]
-    av = sys.argv;
-    if len(av) < 3:
-        if len(av) == 2:
-            cfg=config()
-            cfg.read_config("config", [])
-            lines=['$$' + av[1] + '\n']
-            expand(cfg, lines, sys.stdout)
-            sys.exit(0)
-        print "Usage: expand.py TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
-        print "   or: expand.py NAME"
+    av = sys.argv[1:]           # Drop expand.py
+    if av[0] == '-c':
+        configfile = av[1]      # -c CONFIG
+        av = av[2:]
+        name = os.path.basename(configfile)
+        if name[-4:] == ".cfg":
+            name = name[:-4]
+        extra = "CONFIG=" + name
+    else:
+        configfile = "config" 
+        extra = "CONFIG="
+    if len(av) == 0 or av[0] == '-h':
+        print "Usage: expand.py [ -c CONFIG ] TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
+        print "   or: expand.py [ -c CONFIG ] NAME"
         sys.exit(1)
+    if len(av) == 1:
+        cfg=config()
+        cfg.read_config(configfile, [])
+        lines=['$$' + av[0] + '\n']
+        expand(cfg, lines, sys.stdout)
+        sys.exit(0)
     cfg=config()
-    cfg.read_config("config", av[3:])
-    lines=myopen(av[1]).readlines()
-    fp = open(av[2], 'w')
+    cfg.read_config(configfile, av[2:])
+    lines=myopen(av[0]).readlines()
+    fp = open(av[1], 'w')
     expand(cfg, lines, fp)
     fp.close()
     sys.exit(0)

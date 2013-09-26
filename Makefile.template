@@ -1,6 +1,6 @@
 # Makefile to install the st.cmd into the correctly location.
 
-EXPAND    = /reg/g/pcds/controls/macro/expand.py
+EXPAND    = /reg/g/pcds/controls/macro/expand
 REALPATH  = /reg/g/pcds/controls/macro/realpath
 
 IOC_APPL_TOP = $(shell $(EXPAND) PARENT)

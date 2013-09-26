@@ -1,0 +1,7 @@
+#!/bin/bash
+export PSPKG_RELEASE=everything
+export PATH=/usr/local/bin:/bin:/usr/bin
+unset LD_LIBRARY_PATH
+unset PYTHONPATH
+source /reg/common/package/etc/set_env.sh
+$0.py "$@"
