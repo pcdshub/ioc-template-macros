@@ -52,6 +52,8 @@ class config():
 
     def read_config(self, file, extra):
         fp = myopen(file)
+        if not fp:
+            raise IOError, "File %s not found!" % ( file )
         lines = [l + "\n" for l in extra] + fp.readlines()
         fp.close()
 
@@ -471,16 +473,21 @@ if __name__ == '__main__':
         print "Usage: expand.py [ -c CONFIG ] TEMPLATE OUTFILE [ ADDITIONAL_STATEMENTS ]"
         print "   or: expand.py [ -c CONFIG ] NAME"
         sys.exit(1)
-    if len(av) == 1:
+    try:
+        if len(av) == 1:
+            cfg=config()
+            cfg.read_config(configfile, [])
+            lines=['$$' + av[0] + '\n']
+            expand(cfg, lines, sys.stdout)
+            sys.exit(0)
         cfg=config()
-        cfg.read_config(configfile, [])
-        lines=['$$' + av[0] + '\n']
-        expand(cfg, lines, sys.stdout)
+        cfg.read_config(configfile, av[2:])
+        lines=myopen(av[0]).readlines()
+        fp = open(av[1], 'w')
+        expand(cfg, lines, fp)
+        fp.close()
         sys.exit(0)
-    cfg=config()
-    cfg.read_config(configfile, av[2:])
-    lines=myopen(av[0]).readlines()
-    fp = open(av[1], 'w')
-    expand(cfg, lines, fp)
-    fp.close()
-    sys.exit(0)
+    except IOError, e:
+        print e
+        sys.exit(1)
+
