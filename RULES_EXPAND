@@ -3,12 +3,11 @@
 # Creates build rules needed to expand templated IOC config files
 #
 EXPAND       = /reg/g/pcds/controls/macro/expand
-REALPATH     = /reg/g/pcds/controls/macro/realpath
 
 ifeq ($(BUILD_TOP),)
 BUILD_TOP = build
 endif
-BUILD_TOP_ABS = $(realpath $(BUILD_TOP))
+BUILD_TOP_ABS = $(abspath $(BUILD_TOP))
 
 IOC_DEP_PATTERN   = $(BUILD_TOP)/iocBoot/__IOC__/IOC_APPL_TOP
 IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/Makefile
