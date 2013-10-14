@@ -3,7 +3,6 @@
 # Creates build rules needed to expand templated IOC config files
 #
 EXPAND       = /reg/g/pcds/controls/macro/expand
-export EXPAND_PATH=$(abspath .)
 
 ifeq ($(BUILD_TOP),)
 BUILD_TOP = build
