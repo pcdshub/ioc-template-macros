@@ -105,8 +105,6 @@ class config():
         value = output.getvalue()
         output.close()
         lines = value.split("\n")
-        print d
-        print lines
         
         i = {}
         d = {"DIRNAME": self.dirname}
