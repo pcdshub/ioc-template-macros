@@ -28,7 +28,8 @@ def myopen(file):
 
 class config():
     def __init__(self):
-        self.ddict = {"DIRNAME": os.getcwd().split('/')[-1]}
+        self.dirname = os.getcwd().split('/')[-1]
+        self.ddict = {}
         self.idict = {}
 
         # Pre-define some regular expressions!
@@ -51,23 +52,6 @@ class config():
                           ast.BitXor: operator.xor}
 
     def read_config(self, file, extra):
-        fp = myopen(file)
-        if not fp:
-            raise IOError, "File %s not found!" % ( file )
-        lines = [l + "\n" for l in extra] + fp.readlines()
-        fp.close()
-
-        # Expand the config!!!
-        output = StringIO.StringIO()
-        expand(self, lines, output)
-        value = output.getvalue()
-        output.close()
-        lines = value.split("\n")
-
-        i = self.idict
-        d = self.ddict
-        nd = {}
-
         eq      = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
         eqq     = re.compile('^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*"(.*)"[ \t]*$')
         eqqq    = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*'(.*)'[ \t]*$")
@@ -78,6 +62,56 @@ class config():
         prmeq   = re.compile("^([A-Za-z0-9_]*)=([^,]*)(,)")
         prmeqq  = re.compile('^([A-Za-z0-9_]*)="([^"]*)"(,)')
         prmeqqq = re.compile("^([A-Za-z0-9_]*)='([^']*)'(,)")
+
+        fp = myopen(file)
+        if not fp:
+            raise IOError, "File %s not found!" % ( file )
+        lines = [l + "\n" for l in extra] + fp.readlines()
+        fp.close()
+        origlines = lines
+
+        # Do the preliminary config expansion!
+        output = StringIO.StringIO()
+        expand(self, lines, output)
+        value = output.getvalue()
+        output.close()
+        lines = value.split("\n")
+
+        d = {"DIRNAME": self.dirname}
+        for l in lines:
+            l = l.strip()
+            m = inst.search(l)
+            if m != None:
+                continue            # Skip instantiations for now!
+            m = eqqq.search(l)
+            if m == None:
+                m = eqq.search(l)
+                if m == None:
+                    m = eq.search(l)
+            if m != None:
+                var = m.group(1)
+                val = m.group(2)
+                d[var] = val;
+                continue
+            if l != "" and l[0] != '#':
+                print "Skipping unknown line: %s" % l
+        self.ddict = d
+
+        # Now that we have the aliases, reprocess the config!
+        
+        lines = origlines
+        output = StringIO.StringIO()
+        expand(self, lines, output)
+        value = output.getvalue()
+        output.close()
+        lines = value.split("\n")
+        print d
+        print lines
+        
+        i = {}
+        d = {"DIRNAME": self.dirname}
+        nd = {}
+        
         for l in lines:
             l = l.strip()
             m = inst.search(l)
@@ -156,6 +190,7 @@ class config():
                 print "Skipping unknown line: %s" % l
         self.idict = i
         self.ddict = d
+
 
     def eval_expr(self, expr):
         return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])

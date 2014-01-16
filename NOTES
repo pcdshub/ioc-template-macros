@@ -72,3 +72,11 @@ For example, if we have:
 Then we have defined global symbols $$EX0 = Y, $$EX1 = Z, $$AB0 = C and 
 $$AD0 = F.  If we $$LOOP(A), then within the body of the loop, we will
 also have $$B = C, $$D = F, and $$EX = Y.
+
+Limited expansion is done while reading the config file as well.  The file is
+expanded once with no variable definitions, and then processed to get a set
+of variable definitions.  This is used to process the file again, and this
+expansion is parsed to get the actual definions and instantiations used to
+process the input file.  NOTE: THE DEFINITIONS USED ARE THE *FINAL* DEFINITIONS
+IN THE CONFIG FILE!!!
+
