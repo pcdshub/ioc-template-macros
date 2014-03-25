@@ -393,6 +393,30 @@ def rename_index(d):
         d[new[i]] = val[i]
     return d
 
+#
+# Let's shorten translation strings by accepting ranges with '-'.  We'll treat
+# '-' special at the beginning or end of the string and just let them be.
+#
+def enumstring(s):
+    m = re.search("^(-*)(.*?)(-*)$", s)
+    out = m.group(1)
+    body = m.group(2)
+    while body != "":
+        if len(body) > 1 and body[1] == '-':
+            first = ord(body[0])
+            last = ord(body[2])
+            if first <= last:
+                out += "".join(map(chr, range(first, last+1)))
+            else:
+                out += "".join(map(chr, range(first, last-1, -1)))
+            body = body[3:]
+            pass
+        else:
+            out += body[0];
+            body = body[1:]
+    out += m.group(3)
+    return out
+
 def expand(cfg, lines, f):
     i = 0
     loc = 0
@@ -560,7 +584,8 @@ def expand(cfg, lines, f):
                     f.write(fmt % (v))
                 else: # Must be "TRANSLATE"
                     try:
-                        val = cfg.ddict[argm.group(1)].translate(string.maketrans(argm.group(2), argm.group(3)))
+                        val = cfg.ddict[argm.group(1)].translate(string.maketrans(enumstring(argm.group(2)),
+                                                                                  enumstring(argm.group(3))))
                         f.write(val)
                     except:
                         pass
