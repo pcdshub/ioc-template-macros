@@ -51,27 +51,31 @@ forms:
 All of these define $$VAR to have the value VALUE.
 
 Instantiations have the form:
-    INST(PARAMLIST)
-where the PARAMLIST is a comma-separated list of entries of the forms:
+    [ INAME: ] INST(PARAMLIST)
+where INAME is the instance name, and the PARAMLIST is a comma-separated
+list of entries of the forms:
     VAR=VALUE
     VAR="VALUE"
     VAR='VALUE'
     OTHERINSTn
+    OTHERINAME
 
 Instantiations are numbered, with the instantiation number assigned to a
 special variable $$INDEX.  The first three types of parameters all create
-global symbols of the form $$INSTVARn with value VALUE.  The last form
-indicates that this instantiation uses a particular instantiation of
-some other instantiation, with n being the number of the other instantiation.
+global symbols of the form $$INSTVARn with value VALUE.  The last two forms
+indicate that this instantiation uses a particular instantiation of
+some other instantiation.
 
 For example, if we have:
     E(X=Y)
-    E(X=Z)
+    TEST:E(X=Z)
     A(B=C,D=F,E0)
+    A(B=Q,D=R,TEST)
     
-Then we have defined global symbols $$EX0 = Y, $$EX1 = Z, $$AB0 = C and 
-$$AD0 = F.  If we $$LOOP(A), then within the body of the loop, we will
-also have $$B = C, $$D = F, and $$EX = Y.
+Then we have defined global symbols $$EX0 = Y, $$EX1 = Z, $$AB0 = C, $$AD0 = F,
+$$AB1 = Q and $$AD1 = R.  If we $$LOOP(A), then within the body of the loop,
+we will have $$B = C, $$D = F, and $$EX = Y when $$INDEX is 0, and $$B = Q,
+$$D = R and $$EX = Z when $$INDEX is 1.
 
 Limited expansion is done while reading the config file as well.  The file is
 expanded once with no variable definitions, and then processed to get a set
@@ -80,3 +84,73 @@ expansion is parsed to get the actual definions and instantiations used to
 process the input file.  NOTE: THE DEFINITIONS USED ARE THE *FINAL* DEFINITIONS
 IN THE CONFIG FILE!!!
 
+------------------------------------------------------------------------------
+New style: config files start with a set of definitions:
+    VAR=VALUE
+    VAR="VALUE"
+    VAR='VALUE'
+    VAR VALUE
+    VAR "VALUE"
+    VAR 'VALUE'
+In the last three, any amount of whitespace can occur after VAR but before VALUE,
+but whitespace in VALUE is preserved.
+
+Then, we have instances: either as before or begun with
+    INSTANCE xxx [ yyy ]
+where xxx is the type of the instance and yyy is an optional name for this
+instance.  In this case, the following lines consist of definitions as above,
+with the exception that lines of the form:
+    VAR VALUE
+cannot have any whitespace in the VALUE.  Multiple assignments can be on a
+single line.
+
+The instance ends with either EOF or a new INSTANCE.
+
+To clarify this, a config file such as:
+    RELEASE=/reg/g/pcds/package/epics/3.14/ioc/common/ipimb/R2.0.17
+    ARCH=linux-x86
+    ENGINEER=Michael Browne (mcbrowne)
+    LOCATION=MEC:R64A:24
+    IOC_PV=IOC:MEC:IMB02
+    
+    EVR(NAME=MEC:XT2:EVR:01,TYPE=PMC)
+    
+    IPIMB(NAME=MEC:XT2:IPM:02,PORT=/dev/ttyPS3,BLDID=23,EVR0,TRIG=0)
+    IPIMB(NAME=MEC:XT2:PIM:02,PORT=/dev/ttyPS2,BLDID=42,EVR0,TRIG=0)
+    IPIMB(NAME=MEC:XT2:IPM:03,PORT=/dev/ttyPS1,BLDID=24,EVR0,TRIG=0)
+    IPIMB(NAME=MEC:XT2:PIM:03,PORT=/dev/ttyPS0,BLDID=43,EVR0,TRIG=0)
+
+could be written:
+    RELEASE    /reg/g/pcds/package/epics/3.14/ioc/common/ipimb/R2.0.17
+    ARCH       linux-x86
+    ENGINEER   Michael Browne (mcbrowne)
+    LOCATION   MEC:R64A:24
+    IOC_PV     IOC:MEC:IMB02
+    
+    INSTANCE EVR
+        NAME       MEC:XT2:EVR:01
+        TYPE       PMC
+    
+    INSTANCE IPIMB
+        NAME       MEC:XT2:IPM:02
+        PORT       /dev/ttyPS3
+        BLDID      23
+        EVR0       TRIG=0
+
+    INSTANCE IPIMB
+        NAME       MEC:XT2:PIM:02
+        PORT       /dev/ttyPS2
+        BLDID      42
+        EVR0       TRIG=0
+
+    INSTANCE IPIMB
+        NAME       MEC:XT2:IPM:03
+        PORT       /dev/ttyPS1
+        BLDID      24
+        EVR0       TRIG=0
+
+    INSTANCE IPIMB
+        NAME       MEC:XT2:PIM:03
+        PORT       /dev/ttyPS0
+        BLDID      43
+        EVR0       TRIG=0

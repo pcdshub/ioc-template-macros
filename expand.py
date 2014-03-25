@@ -51,17 +51,41 @@ class config():
                           ast.BitAnd : operator.and_,
                           ast.BitXor: operator.xor}
 
-    def read_config(self, file, extra):
-        eq      = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
-        eqq     = re.compile('^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*"(.*)"[ \t]*$')
-        eqqq    = re.compile("^[ \t]*([A-Za-z0-9_]*)[ \t]*=[ \t]*'(.*)'[ \t]*$")
-        inst    = re.compile("^[ \t]*(([A-Za-z0-9_]*):[ \t]*)?([A-Za-z0-9_]*)\((.*)\)[ \t]*$")
+    def create_instance(self, iname, id, idict, ndict):
+        try:
+            allinst = idict[iname]
+        except:
+            allinst = []
+            idict[iname] = []
+        n = str(len(allinst))
+        if id != None:
+            ndict[id] = (iname, int(n))
+        dd = {}
+        dd["INDEX"] = n
+        return (dd, n)
 
-        prminst = re.compile("^([A-Za-z0-9_]*)(,)")
-        prmidx  = re.compile("^([A-Za-z_]*)([0-9_]*)(,)")
-        prmeq   = re.compile("^([A-Za-z0-9_]*)=([^,]*)(,)")
-        prmeqq  = re.compile('^([A-Za-z0-9_]*)="([^"]*)"(,)')
-        prmeqqq = re.compile("^([A-Za-z0-9_]*)='([^']*)'(,)")
+    def finish_instance(self, iname, idict, dd):
+        idict[iname].append(dd)
+
+    def read_config(self, file, extra):
+        w       = re.compile("^[ \t]*([^ \t=]+)")
+        wq      = re.compile('^[ \t]*"([^"]*)"')
+        wqq     = re.compile("^[ \t]*'([^']*)'")
+        assign  = re.compile("^[ \t]*=")
+        sp      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+(.+?)[ \t]*$")
+        spq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+"([^"]*)"[ \t]*$')
+        spqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+'([^']*)'[ \t]*$")
+        eq      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
+        eqq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
+        eqqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'([^']*)'[ \t]*$")
+        inst    = re.compile("^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\((.*)\)[ \t]*$")
+        inst2    = re.compile("^[ \t]*INSTANCE[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*([A-Za-z0-9_]*)[ \t]*$")
+
+        prminst = re.compile("^([A-Za-z_][A-Za-z0-9_]*)(,)")
+        prmidx  = re.compile("^([A-Za-z_][A-Za-z0-9_]*?)([0-9_]+)(,)")
+        prmeq   = re.compile("^([A-Za-z_][A-Za-z0-9_]*)=([^,]*)(,)")
+        prmeqq  = re.compile('^([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"(,)')
+        prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 
         fp = myopen(file)
         if not fp:
@@ -83,11 +107,21 @@ class config():
             m = inst.search(l)
             if m != None:
                 continue            # Skip instantiations for now!
+            m = inst2.search(l)
+            if m != None:           # First new-style instantiation --> we're done here!
+                break
+            # Search for a one-line assignment of some form!
             m = eqqq.search(l)
             if m == None:
                 m = eqq.search(l)
                 if m == None:
                     m = eq.search(l)
+                    if m == None:
+                        m = spqq.search(l)
+                        if m == None:
+                            m = spq.search(l)
+                            if m == None:
+                                m = sp.search(l)
             if m != None:
                 var = m.group(1)
                 val = m.group(2)
@@ -109,24 +143,85 @@ class config():
         i = {}
         d = {"DIRNAME": self.dirname}
         nd = {}
+        newstyle = False
+        ininst   = False
         
         for l in lines:
             l = l.strip()
+            m = inst2.search(l)
+            if m != None:
+                print "Found newstyle instance %s" % l
+                newstyle = True
+            if newstyle:
+                if m != None:
+                    if ininst:
+                        print "Finishing instance of %s" % iname
+                        self.finish_instance(iname, i, dd)
+                    ininst = True
+                    iname = m.group(1)
+                    id = m.group(2)
+                    print "Creating instance of %s" % iname
+                    dd, n = self.create_instance(iname, id, i, nd)
+                else:
+                    loc = 0           # Look for parameters!
+                    first = None
+                    haveeq = False
+                    while l[loc:] != '':
+                        m = assign.search(l[loc:])
+                        if m != None:
+                            loc += m.end()
+                            if haveeq:
+                                print "Double equal sign in |%s|" % l
+                            haveeq = True
+                            continue   # Just ignore it!
+
+                        m = wqq.search(l[loc:])
+                        if m != None:
+                            loc += m.end()
+                        else:
+                            m = wq.search(l[loc:])
+                            if m != None:
+                                loc += m.end() + 1
+                            else:
+                                m = w.search(l[loc:])
+                                if m != None:
+                                    loc += m.end() + 1
+                                else:
+                                    break        # How does this even happen?!?
+                        val = m.group(1)
+                        if first != None:
+                            dd[first] = val
+                            d[iname + first + n] = val
+                            first = None
+                        else:
+                            # Could this be an instance parameter?
+                            useinst = ''
+                            usenum  = 0
+                            try:
+                                t = nd[val]
+                                useinst = t[0]
+                                usenum = t[1]
+                            except:
+                                m = prmidx.search(val+",")
+                                if m != None:
+                                    useinst = m.group(1)
+                                    usenum = int(m.group(2))
+                            try:
+                                used = i[useinst][usenum]
+                                for k in used.keys():
+                                    var = useinst + k
+                                    val = used[k]
+                                    dd[var] = val
+                            except:
+                                first = val
+                                haveeq = False
+                continue
             m = inst.search(l)
             if m != None:
                 id = m.group(2)
                 iname = m.group(3)
                 params = m.group(4) + ","
-                try:
-                    allinst = i[iname]
-                except:
-                    allinst = []
-                    i[iname] = []
-                # We've found an instantiation.  Create a local dictionary, dd, for its
-                # names, and also add the full names to the main dictionary.
-                dd = {}
-                n = str(len(allinst))
-                dd["INDEX"] = n
+                dd, n = self.create_instance(iname, id, i, nd)
                 while (params != ""):
                     m = prmeqqq.search(params)
                     if m == None:
@@ -170,15 +265,20 @@ class config():
                         else:
                             print "Unknown parameter in line %s" % params
                             params = ""
-                i[iname].append(dd)
-                if id != None:
-                    nd[id] = (iname, int(n))
+                self.finish_instance(iname, i, dd)
                 continue
+            # Search for a one-line assignment of some form!
             m = eqqq.search(l)
             if m == None:
                 m = eqq.search(l)
                 if m == None:
                     m = eq.search(l)
+                    if m == None:
+                        m = spqq.search(l)
+                        if m == None:
+                            m = spq.search(l)
+                            if m == None:
+                                m = sp.search(l)
             if m != None:
                 var = m.group(1)
                 val = m.group(2)
@@ -186,6 +286,8 @@ class config():
                 continue
             if l != "" and l[0] != '#':
                 print "Skipping unknown line: %s" % l
+        if ininst:
+            self.finish_instance(iname, i, dd)
         self.idict = i
         self.ddict = d
 
