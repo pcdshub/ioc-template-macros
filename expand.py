@@ -150,17 +150,14 @@ class config():
             l = l.strip()
             m = inst2.search(l)
             if m != None:
-                print "Found newstyle instance %s" % l
                 newstyle = True
             if newstyle:
                 if m != None:
                     if ininst:
-                        print "Finishing instance of %s" % iname
                         self.finish_instance(iname, i, dd)
                     ininst = True
                     iname = m.group(1)
                     id = m.group(2)
-                    print "Creating instance of %s" % iname
                     dd, n = self.create_instance(iname, id, i, nd)
                 else:
                     loc = 0           # Look for parameters!
