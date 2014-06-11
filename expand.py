@@ -28,7 +28,8 @@ def myopen(file):
 
 class config():
     def __init__(self):
-        self.dirname = os.getcwd().split('/')[-1]
+        self.path = os.getcwd()
+        self.dirname = self.path.split('/')[-1]
         self.ddict = {}
         self.idict = {}
 
@@ -101,7 +102,7 @@ class config():
         output.close()
         lines = value.split("\n")
 
-        d = {"DIRNAME": self.dirname}
+        d = {"DIRNAME": self.dirname, "PATH" : self.path}
         for l in lines:
             l = l.strip()
             m = inst.search(l)
@@ -141,7 +142,7 @@ class config():
         lines = value.split("\n")
         
         i = {}
-        d = {"DIRNAME": self.dirname}
+        d = {"DIRNAME": self.dirname, "PATH": self.path}
         nd = {}
         newstyle = False
         ininst   = False
