@@ -35,7 +35,7 @@ class config():
 
         # Pre-define some regular expressions!
         self.doubledollar = re.compile("^(.*?)\$\$")
-        self.keyword      = re.compile("^(LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+        self.keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
         self.parens       = re.compile("^\(([^)]*?)\)")
         self.brackets     = re.compile("^\{([^}]*?)\}")
         self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -580,6 +580,15 @@ def expand(cfg, lines, f):
                     except:
                         v = 0
                     f.write(fmt % (v))
+                elif kw == "UP":
+                    try:
+                        fn = cfg.ddict[argm.group(1)]
+                    except:
+                        fn = argm.group(1)
+                    try:
+                        f.write(fn[:fn.rindex('/')])
+                    except:
+                        pass
                 else: # Must be "TRANSLATE"
                     try:
                         val = cfg.ddict[argm.group(1)].translate(string.maketrans(enumstring(argm.group(2)),
