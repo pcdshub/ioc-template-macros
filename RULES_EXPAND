@@ -18,6 +18,7 @@ IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/Makefile
 IOC_DEP_PATTERN  += $(BUILD_TOP)/IOC_APPL_TOP
 IOC_DEP_PATTERN  += $(BUILD_TOP)/Makefile
 
+
 DIR_LIST += $(BUILD_TOP)
 DIR_LIST += $(BUILD_TOP)/archive
 DIR_LIST += $(BUILD_TOP)/autosave
@@ -44,6 +45,13 @@ endef
 # Start of EXPAND_template
 define EXPAND_template
 $(info Creating rules for IOC $(1).cfg w/ IOC_APPL_TOP=$(IOC_APPL_TOP))
+
+# Add any *.sh files in the templates directory
+IOC_DEP_SH = $(notdir $(wildcard $(IOC_APPL_TOP)/iocBoot/templates/*.sh))
+IOC_DEP_PATTERN += $(addprefix $(BUILD_TOP)/iocBoot/__IOC__/, $$(IOC_DEP_SH))
+# $$(info IOC_DEP_SH=$$(IOC_DEP_SH))
+# $$(info IOC_DEP_PATTERN=$$(IOC_DEP_PATTERN))
+
 $(1)_DEP_LIST  = $$(subst __IOC__,$(1),$$(IOC_DEP_PATTERN))
 DIR_LIST      += $(BUILD_TOP)/iocBoot/$(1)
 
@@ -75,6 +83,12 @@ $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP:
 
 # Expand ioc.sub-arch and ioc.sub-req
 $(BUILD_TOP)/iocBoot/$(1)/$(1).%: $(IOC_APPL_TOP)/iocBoot/templates/ioc.%
+	@echo Expanding $$@
+	@$(EXPAND) -c $(1).cfg $$(<) $$(@) IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	@chmod ug+w $$@
+
+# Expand any *.sh files
+$(BUILD_TOP)/iocBoot/$(1)/%.sh: $(IOC_APPL_TOP)/iocBoot/templates/%.sh
 	@echo Expanding $$@
 	@$(EXPAND) -c $(1).cfg $$(<) $$(@) IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
 	@chmod ug+w $$@
