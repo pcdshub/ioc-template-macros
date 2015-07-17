@@ -649,7 +649,15 @@ if __name__ == '__main__':
             sys.exit(0)
         cfg=config()
         cfg.read_config(configfile, av[2:])
-        lines=myopen(av[0]).readlines()
+        try:
+            tplFile=myopen(av[0])
+            if not tplFile:
+                print "Unable to open template file:", av[0]
+                sys.exit(1)
+        except IOError, e:
+            print e
+            sys.exit(1)
+        lines=tplFile.readlines()
         fp = open(av[1], 'w')
         expand(cfg, lines, fp)
         fp.close()
