@@ -9,6 +9,45 @@ import StringIO
 
 expand_path = []
 
+# Predefine some regular expressions!
+w       = re.compile("^[ \t]*([^ \t=]+)")
+wq      = re.compile('^[ \t]*"([^"]*)"')
+wqq     = re.compile("^[ \t]*'([^']*)'")
+assign  = re.compile("^[ \t]*=")
+sp      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+(.+?)[ \t]*$")
+spq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+"([^"]*)"[ \t]*$')
+spqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+'([^']*)'[ \t]*$")
+eq      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
+eqq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
+eqqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'([^']*)'[ \t]*$")
+inst    = re.compile("^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\((.*)\)[ \t]*$")
+inst2   = re.compile("^[ \t]*INSTANCE[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*([A-Za-z0-9_]*)[ \t]*$")
+prminst = re.compile("^([A-Za-z_][A-Za-z0-9_]*)(,)")
+prmidx  = re.compile("^([A-Za-z_][A-Za-z0-9_]*?)([0-9_]+)(,)")
+prmeq   = re.compile("^([A-Za-z_][A-Za-z0-9_]*)=([^,]*)(,)")
+prmeqq  = re.compile('^([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"(,)')
+prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
+inc     = re.compile("^\$\$INCLUDE\((.*)\)")
+idxre   = re.compile("^INDEX([0-9]*)")
+doubledollar = re.compile("^(.*?)\$\$")
+keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+parens       = re.compile("^\(([^)]*?)\)")
+brackets     = re.compile("^\{([^}]*?)\}")
+trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
+ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
+word         = re.compile("^([A-Za-z0-9_]*)")
+
+operators = {ast.Add: operator.add,
+             ast.Sub: operator.sub,
+             ast.Mult: operator.mul,
+             ast.Div: operator.truediv,
+             ast.Pow: operator.pow,
+             ast.LShift : operator.lshift,
+             ast.RShift: operator.rshift,
+             ast.BitOr: operator.or_,
+             ast.BitAnd : operator.and_,
+             ast.BitXor: operator.xor}
+
 def myopen(file):
     try:
         fp = open(file)
@@ -33,25 +72,6 @@ class config():
         self.ddict = {}
         self.idict = {}
 
-        # Pre-define some regular expressions!
-        self.doubledollar = re.compile("^(.*?)\$\$")
-        self.keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
-        self.parens       = re.compile("^\(([^)]*?)\)")
-        self.brackets     = re.compile("^\{([^}]*?)\}")
-        self.trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
-        self.ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
-        self.word         = re.compile("^([A-Za-z0-9_]*)")
-        self.operators = {ast.Add: operator.add,
-                          ast.Sub: operator.sub,
-                          ast.Mult: operator.mul,
-                          ast.Div: operator.truediv,
-                          ast.Pow: operator.pow,
-                          ast.LShift : operator.lshift,
-                          ast.RShift: operator.rshift,
-                          ast.BitOr: operator.or_,
-                          ast.BitAnd : operator.and_,
-                          ast.BitXor: operator.xor}
-
     def create_instance(self, iname, id, idict, ndict):
         try:
             allinst = idict[iname]
@@ -68,26 +88,58 @@ class config():
     def finish_instance(self, iname, idict, dd):
         idict[iname].append(dd)
 
+    def process_config_line(self, l, d):
+        l = l.strip()
+        m = inst.search(l)
+        if m != None:
+            return True         # Skip instantiations for now!
+        m = inst2.search(l)
+        if m != None:           # First new-style instantiation --> we're done here!
+            return False
+        # Search for a one-line assignment of some form!
+        m = eqqq.search(l)
+        if m == None:
+            m = eqq.search(l)
+            if m == None:
+                m = eq.search(l)
+                if m == None:
+                    m = spqq.search(l)
+                    if m == None:
+                        m = spq.search(l)
+                        if m == None:
+                            m = sp.search(l)
+        if m != None:
+            var = m.group(1)
+            val = m.group(2)
+            d[var] = val;
+            return True
+        m = inc.search(l)
+        if m != None:
+            fn = m.group(1)
+            try:
+                fn = d[fn]
+            except:
+                pass
+            try:
+                output = StringIO.StringIO()
+                expand(d, [fn], output)
+                fn = output.getvalue().strip()
+                output.close()
+            except:
+                pass
+            try:
+                newlines=myopen(fn).readlines()
+            except:
+                d["_failed_include"].append(fn)
+                return True
+            for ll in newlines:
+                self.process_config_line(ll, d)
+            return True
+        if l != "" and l[0] != '#':
+            print "Skipping unknown line: %s" % l
+        return True
+
     def read_config(self, file, extra):
-        w       = re.compile("^[ \t]*([^ \t=]+)")
-        wq      = re.compile('^[ \t]*"([^"]*)"')
-        wqq     = re.compile("^[ \t]*'([^']*)'")
-        assign  = re.compile("^[ \t]*=")
-        sp      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+(.+?)[ \t]*$")
-        spq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+"([^"]*)"[ \t]*$')
-        spqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]+'([^']*)'[ \t]*$")
-        eq      = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*?)[ \t]*$")
-        eqq     = re.compile('^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"([^"]*)"[ \t]*$')
-        eqqq    = re.compile("^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'([^']*)'[ \t]*$")
-        inst    = re.compile("^[ \t]*(([A-Za-z_][A-Za-z0-9_]*):[ \t]*)?([A-Za-z_][A-Za-z0-9_]*)\((.*)\)[ \t]*$")
-        inst2    = re.compile("^[ \t]*INSTANCE[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*([A-Za-z0-9_]*)[ \t]*$")
-
-        prminst = re.compile("^([A-Za-z_][A-Za-z0-9_]*)(,)")
-        prmidx  = re.compile("^([A-Za-z_][A-Za-z0-9_]*?)([0-9_]+)(,)")
-        prmeq   = re.compile("^([A-Za-z_][A-Za-z0-9_]*)=([^,]*)(,)")
-        prmeqq  = re.compile('^([A-Za-z_][A-Za-z0-9_]*)="([^"]*)"(,)')
-        prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
-
         fp = myopen(file)
         if not fp:
             raise IOError, "File %s not found!" % ( file )
@@ -95,42 +147,29 @@ class config():
         fp.close()
         origlines = lines
 
-        # Do the preliminary config expansion!
-        output = StringIO.StringIO()
-        expand(self, lines, output)
-        value = output.getvalue()
-        output.close()
-        lines = value.split("\n")
+        # Do the preliminary config expansion!  The weirdness here is we might
+        # have defines that determine the value of the $$INCLUDE parameter.
+        # So we just iterate... 5 is a reasonable limit, we'll probably be done
+        # in 2 or 3.
+        fi = ["all"]
+        cnt = 0
+        while len(fi) != 0 and cnt < 5:
+            lines = origlines
+            cnt += 1
+            output = StringIO.StringIO()
+            expand(self, lines, output, True)  # Leave failed $$INCLUDE in the output!
+            value = output.getvalue()
+            output.close()
+            lines = value.split("\n")
 
-        d = {"DIRNAME": self.dirname, "PATH" : self.path}
-        for l in lines:
-            l = l.strip()
-            m = inst.search(l)
-            if m != None:
-                continue            # Skip instantiations for now!
-            m = inst2.search(l)
-            if m != None:           # First new-style instantiation --> we're done here!
-                break
-            # Search for a one-line assignment of some form!
-            m = eqqq.search(l)
-            if m == None:
-                m = eqq.search(l)
-                if m == None:
-                    m = eq.search(l)
-                    if m == None:
-                        m = spqq.search(l)
-                        if m == None:
-                            m = spq.search(l)
-                            if m == None:
-                                m = sp.search(l)
-            if m != None:
-                var = m.group(1)
-                val = m.group(2)
-                d[var] = val;
-                continue
-            if l != "" and l[0] != '#':
-                print "Skipping unknown line: %s" % l
-        self.ddict = d
+            d = {"DIRNAME": self.dirname, "PATH" : self.path, "_failed_include" : []}
+            for l in lines:
+                if not self.process_config_line(l, d):
+                    break
+            fi = d['_failed_include']
+            del d['_failed_include']
+            self.ddict = d
+            cnt += 1
 
         # Now that we have the aliases, reprocess the config!
         
@@ -374,7 +413,6 @@ def searchforend(lines, endre, lb, rb, i, l):
     return None
 
 def rename_index(d):
-    idxre = re.compile("^INDEX([0-9]*)")
     new = []
     val = []
     for k in d.keys():
@@ -415,11 +453,11 @@ def enumstring(s):
     out += m.group(3)
     return out
 
-def expand(cfg, lines, f):
+def expand(cfg, lines, f, isfirst=False):
     i = 0
     loc = 0
     while i < len(lines):
-        m = cfg.doubledollar.search(lines[i][loc:])
+        m = doubledollar.search(lines[i][loc:])
         if m == None:
             # Line without a $$.
             f.write("%s" % lines[i][loc:])
@@ -432,7 +470,7 @@ def expand(cfg, lines, f):
         pos = loc + m.end(1)     # save where we found this!
         loc = pos + 2            # skip the '$$'!
 
-        m = cfg.keyword.search(lines[i][loc:])
+        m = keyword.search(lines[i][loc:])
         if m != None:
             kw = m.group(1)
             if kw == None:
@@ -442,20 +480,20 @@ def expand(cfg, lines, f):
                 loc += m.end(1)      # Leave on the '('!
             
             if kw == "TRANSLATE":
-                argm = cfg.trargs.search(lines[i][loc:])
+                argm = trargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+2
             elif kw == "CALC":
-                argm = cfg.brackets.search(lines[i][loc:])
+                argm = brackets.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(1)+1
             elif kw == "IF":
-                argm = cfg.ifargs.search(lines[i][loc:])
+                argm = ifargs.search(lines[i][loc:])
                 if argm != None:
                     kw = "TIF"    # Triple IF!
                     loc += argm.end(3)+1
                 else:
-                    argm = cfg.parens.search(lines[i][loc:])
+                    argm = parens.search(lines[i][loc:])
                     if argm != None:
                         loc += argm.end(1)+1
                     if pos == 0 and lines[i][loc:].strip() == "":
@@ -463,7 +501,7 @@ def expand(cfg, lines, f):
                         loc = 0;
                         i += 1
             else:
-                argm = cfg.parens.search(lines[i][loc:])
+                argm = parens.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(1)+1
                 if pos == 0 and lines[i][loc:].strip() == "":
@@ -501,7 +539,7 @@ def expand(cfg, lines, f):
                     for inst in ilist:
                         cfg.ddict = rename_index(olddict.copy())
                         cfg.ddict.update(inst)
-                        expand(cfg, t[0], f)
+                        expand(cfg, t[0], f, isfirst)
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]
@@ -525,13 +563,13 @@ def expand(cfg, lines, f):
                             newlines = elset[0]
                         else:
                             newlines = t[0]
-                        expand(cfg, newlines, f)
+                        expand(cfg, newlines, f, isfirst)
                     else:
                         # False, do the else!
                         if elset != None:
                             newlines = t[0][elset[1]:]
                             newlines[0] = newlines[0][elset[2]:]
-                            expand(cfg, newlines, f)
+                            expand(cfg, newlines, f, isfirst)
                     i = t[1]
                     loc = t[2]
                 elif kw == "TIF":
@@ -547,17 +585,27 @@ def expand(cfg, lines, f):
                     else:
                         # False, do the else!
                         newlines.append(argm.group(3))
-                    expand(cfg, newlines, f)
+                    expand(cfg, newlines, f, isfirst)
                 elif kw == "INCLUDE":
                     try:
                         fn = cfg.ddict[argm.group(1)]
                     except:
                         fn = argm.group(1)
                     try:
-                        newlines=myopen(fn).readlines()
-                        expand(cfg, newlines, f)
+                        output = StringIO.StringIO()
+                        expand(cfg, [fn], output, isfirst)
+                        fn = output.getvalue().strip()
+                        output.close()
                     except:
-                        print "Cannot open file %s!" % fn
+                        pass
+                    try:
+                        newlines=myopen(fn).readlines()
+                        expand(cfg, newlines, f, isfirst)
+                    except:
+                        if isfirst:
+                            f.write("$$INCLUDE(%s)\n" % argm.group(1))
+                        else:
+                            print "Cannot open file %s!\n" % fn
                 elif kw == "COUNT":
                     try:
                         cnt = str(len(cfg.idict[argm.group(1)]))
@@ -568,7 +616,7 @@ def expand(cfg, lines, f):
                     # Either $$CALC{expr} or $$CALC{expr,format}.
                     args = argm.group(1).split(",")
                     output = StringIO.StringIO()
-                    expand(cfg, [args[0]], output)
+                    expand(cfg, [args[0]], output, isfirst)
                     value = output.getvalue()
                     output.close()
                     if len(args) > 1:
@@ -603,9 +651,9 @@ def expand(cfg, lines, f):
         
         # Just a variable reference!
         if lines[i][loc] == "(":
-            m = cfg.parens.search(lines[i][loc:])
+            m = parens.search(lines[i][loc:])
         else:
-            m = cfg.word.search(lines[i][loc:])
+            m = word.search(lines[i][loc:])
         if m != None:
             try:
                 val = cfg.ddict[m.group(1)]
