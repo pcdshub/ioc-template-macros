@@ -342,7 +342,7 @@ class config():
                 x = 0
             return x
         elif isinstance(node, ast.operator):
-            return self.operators[type(node)]
+            return operators[type(node)]
         elif isinstance(node, ast.BinOp):
             return self.eval_(node.op)(self.eval_(node.left), self.eval_(node.right))
         else:
