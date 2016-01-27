@@ -545,9 +545,13 @@ def expand(cfg, lines, f, isfirst=False):
                     loc = t[2]
                 elif kw == "IF":
                     iname = argm.group(1)
-                    ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
-                    endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
-                    elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
+                    try:
+                        ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
+                        endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
+                        elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
+                    except:
+                        print "Invalid $$IF name: %s" % iname
+                        sys.exit(1)
                     t = searchforend(lines, endre, ifre, endre, i, loc)
                     if t == None:
                         print "Cannot find $$ENDIF(%s)?" % iname
