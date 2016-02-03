@@ -34,6 +34,7 @@ keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
+dbargs       = re.compile('^\(([^,)]*?),([^,)]*?)\)')
 ifargs       = re.compile('^\(([^,)]*?),([^,)]*?),([^,)]*?)\)')
 word         = re.compile("^([A-Za-z0-9_]*)")
 
@@ -493,9 +494,14 @@ def expand(cfg, lines, f, isfirst=False):
                     kw = "TIF"    # Triple IF!
                     loc += argm.end(3)+1
                 else:
-                    argm = parens.search(lines[i][loc:])
+                    argm = dbargs.search(lines[i][loc:])
                     if argm != None:
-                        loc += argm.end(1)+1
+                        kw = "DIF"
+                        loc += argm.end(2)+1
+                    else:
+                        argm = parens.search(lines[i][loc:])
+                        if argm != None:
+                            loc += argm.end(1)+1
                     if pos == 0 and lines[i][loc:].strip() == "":
                         # If the $$ directive is the entire line, don't add a newline!
                         loc = 0;
@@ -543,8 +549,13 @@ def expand(cfg, lines, f, isfirst=False):
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]
-                elif kw == "IF":
+                elif kw == "IF" or kw == "DIF":
                     iname = argm.group(1)
+                    if kw == "DIF":
+                        dif = True
+                        eqval = argm.group(2)
+                    else:
+                        dif = False
                     try:
                         ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
                         endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
@@ -561,7 +572,7 @@ def expand(cfg, lines, f, isfirst=False):
                         v = cfg.ddict[iname]
                     except:
                         v = ""
-                    if v != "":
+                    if (dif and v == eqval) or ((not dif) and v != ""):
                         # True, do the if!
                         if elset != None:
                             newlines = elset[0]

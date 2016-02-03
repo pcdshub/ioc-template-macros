@@ -28,6 +28,10 @@ All of the macro commands in the template files begin with "$$".  These can be:
     $$IF(VAR,if-body,else-body)
 	- An abbreviated form of the $$IF, useful for expressions and other cases
 	  where neither body includes a comma.
+    $$IF(VAR,VAL)
+    $$ELSE(VAR)
+    $$ENDIF(VAR)
+	- Test if VAR is equal to the given value.
     $$INCLUDE(FILENAME)
         - Process the contents of the FILENAME.
     $$CALC{EXPRESSION} or $$CALC{EXPRESSION,FORMAT}
