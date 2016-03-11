@@ -1,4 +1,5 @@
 # Makefile to install the st.cmd into the correctly location.
+# Looks like this file is obsolete now.  BH 3/12/2016
 
 EXPAND    = /reg/g/pcds/controls/macro/expand
 REALPATH  = /reg/g/pcds/controls/macro/realpath
@@ -39,16 +40,17 @@ COPY_ONLY_IF_NON_LOCAL=1
 COPY_SUBDIR=iocBoot/$(IOC)
 COPY_FILES=st.cmd
 
-TEMPS = $(IOC_APPL_TOP)/iocBoot/templates/arch  $(IOC_APPL_TOP)/iocBoot/templates/req \
-	    $(IOC_APPL_TOP)/iocBoot/templates/st.cmd
-EXPAND_FLAGS = TOP=`$(REALPATH) ../..` IOCTOP=`$(REALPATH) $(IOC_APPL_TOP)`
+TEMPS = $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-arch \
+        $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-req \
+	$(IOC_APPL_TOP)/iocBoot/templates/st.cmd
+EXPAND_FLAGS = TOP=`$(REALPATH) ../..` IOCTOP=`$(REALPATH) $(IOC_APPL_TOP)` IOCNAME='$$$$DIRNAME'
 
 install all: expandAll
 
 expandAll: $(TEMPS) $(EXPAND) config
-	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/arch   $(IOC).sub-arch $(EXPAND_FLAGS)
-	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/req    $(IOC).sub-req  $(EXPAND_FLAGS)
-	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/st.cmd st.cmd          $(EXPAND_FLAGS)
+	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-arch  $(IOC).sub-arch $(EXPAND_FLAGS)
+	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-req   $(IOC).sub-req  $(EXPAND_FLAGS)
+	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/st.cmd        st.cmd          $(EXPAND_FLAGS)
 	chmod guo+x st.cmd
 
 clean realclean:: expandclean

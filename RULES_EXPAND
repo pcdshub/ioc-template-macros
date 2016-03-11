@@ -17,6 +17,7 @@ IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/__IOC__.sub-req
 IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/Makefile
 IOC_DEP_PATTERN  += $(BUILD_TOP)/IOC_APPL_TOP
 IOC_DEP_PATTERN  += $(BUILD_TOP)/Makefile
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/edm-__IOC__.cmd
 
 
 DIR_LIST += $(BUILD_TOP)
@@ -73,6 +74,12 @@ $(BUILD_TOP)/iocBoot/$(1)/Makefile:      $(IOC_APPL_TOP)/iocBoot/templates/Makef
 $(BUILD_TOP)/iocBoot/$(1)/st.cmd:      $(IOC_APPL_TOP)/iocBoot/templates/st.cmd
 	@echo Expanding $$@
 	@$(EXPAND) -c $(1).cfg $$(<) $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	@chmod ug+w,a+x $$@
+
+# Expand $(BUILD_TOP)/iocBoot/$(1)/edm-$(1).cmd
+$(BUILD_TOP)/iocBoot/$(1)/edm-$(1).cmd: $(1).cfg
+	@echo Expanding $$@
+	@if [ -f $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd ]; then $(EXPAND) -c $(1).cfg $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP); else echo "#!/bin/sh" > $$@; echo "echo No $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd found!" >> $$@; fi
 	@chmod ug+w,a+x $$@
 
 # Create $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP
@@ -139,8 +146,9 @@ $(DIR_LIST):
 %/iocBoot/templates/ioc.sub-req: ;
 %/iocBoot/templates/Makefile: ;
 %/iocBoot/templates/st.cmd: ;
+%/iocBoot/templates/edm-ioc.cmd: ;
 
-clean realclean: expandclean
+clean distclean realclean: expandclean
 
 expandclean:
 	-rm -rf $(BUILD_TOP)/archive
