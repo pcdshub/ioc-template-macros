@@ -1,0 +1,63 @@
+# Makefile to install the st.cmd into the correctly location.
+# Looks like this file is obsolete now.  BH 3/12/2016
+
+EXPAND    = /reg/g/pcds/controls/macro/expand
+REALPATH  = /reg/g/pcds/controls/macro/realpath
+
+IOC_APPL_TOP = $(shell $(EXPAND) PARENT)
+
+ARCH = $(shell $(EXPAND) ARCH)
+ifeq ($(ARCH),)
+    ARCH = linux-x86_64
+endif
+
+ifeq ($(IOC),)
+    IOC := $(shell basename $(shell pwd))
+    export IOC
+endif
+$(warning IOC name is $(IOC))
+
+override TOP := $(IOC_APPL_TOP)
+
+include $(IOC_APPL_TOP)/configure/CONFIG
+INSTALL_LOCATION = ../../..
+TARGETS = envPaths
+COMMON_DIR = .
+USR_AUTOSAVEFLAGS = -I $(IOC_APPL_TOP)/autosave
+USR_ARCHIVEFLAGS += -V -I $(IOC_APPL_TOP)/archive
+INSTALL_LOCATION_BIN = $(IOC_APPL_TOP)/bin
+
+vpath config . ..
+
+#----------------------------------------------------
+# Create and install IOC archive file
+#
+ARCHIVE += $(IOC).archive
+REQ += $(IOC).req
+
+# See RULES.copy for more information on these variables.
+COPY_ONLY_IF_NON_LOCAL=1
+COPY_SUBDIR=iocBoot/$(IOC)
+COPY_FILES=st.cmd
+
+TEMPS = $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-arch \
+        $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-req \
+	$(IOC_APPL_TOP)/iocBoot/templates/st.cmd
+EXPAND_FLAGS = TOP=`$(REALPATH) ../..` IOCTOP=`$(REALPATH) $(IOC_APPL_TOP)` IOCNAME='$$$$DIRNAME'
+
+install all: expandAll
+
+expandAll: $(TEMPS) $(EXPAND) config
+	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-arch  $(IOC).sub-arch $(EXPAND_FLAGS)
+	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-req   $(IOC).sub-req  $(EXPAND_FLAGS)
+	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/st.cmd        st.cmd          $(EXPAND_FLAGS)
+	chmod guo+x st.cmd
+
+clean realclean:: expandclean
+
+expandclean:
+	-rm -f $(IOC).sub-arch $(IOC).sub-req st.cmd envPaths make.log
+	-rm -f *~
+
+include $(TOP)/configure/RULES
+include $(TOP)/configure/RULES.ioc-targets

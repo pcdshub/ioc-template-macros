@@ -1,0 +1,159 @@
+#
+# RULES_EXPAND
+# Creates build rules needed to expand templated IOC config files
+#
+EXPAND       = /reg/g/pcds/controls/macro/expand
+
+ifeq ($(BUILD_TOP),)
+BUILD_TOP = build
+endif
+BUILD_TOP_ABS = $(abspath $(BUILD_TOP))
+
+IOC_DEP_PATTERN   = $(BUILD_TOP)/iocBoot/__IOC__/IOC_APPL_TOP
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/Makefile
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/st.cmd
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/__IOC__.sub-arch
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/__IOC__.sub-req
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/Makefile
+IOC_DEP_PATTERN  += $(BUILD_TOP)/IOC_APPL_TOP
+IOC_DEP_PATTERN  += $(BUILD_TOP)/Makefile
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/edm-__IOC__.cmd
+
+
+DIR_LIST += $(BUILD_TOP)
+DIR_LIST += $(BUILD_TOP)/archive
+DIR_LIST += $(BUILD_TOP)/autosave
+DIR_LIST += $(BUILD_TOP)/iocBoot
+
+default:	install
+all:		install
+
+.PHONY: install expand
+install: expand
+	@$(MAKE) -C $(BUILD_TOP) $@
+
+expand: $(DIR_LIST)
+
+# Define some multi-line variables to be used by eval to generate the
+# appropriate expand targets, dependencies, and rules for each IOC config file
+
+# Start of IOC_APPL_TOP_template
+define IOC_APPL_TOP_template
+IOC_APPL_TOP = $$(shell $(EXPAND) -c $(1).cfg RELEASE)
+endef
+# End of IOC_APPL_TOP_template
+
+# Start of EXPAND_template
+define EXPAND_template
+$(info Creating rules for IOC $(1).cfg w/ IOC_APPL_TOP=$(IOC_APPL_TOP))
+
+# Add any *.sh files in the templates directory
+IOC_DEP_SH = $(notdir $(wildcard $(IOC_APPL_TOP)/iocBoot/templates/*.sh))
+IOC_DEP_PATTERN += $(addprefix $(BUILD_TOP)/iocBoot/__IOC__/, $$(IOC_DEP_SH))
+# $$(info IOC_DEP_SH=$$(IOC_DEP_SH))
+# $$(info IOC_DEP_PATTERN=$$(IOC_DEP_PATTERN))
+
+$(1)_DEP_LIST  = $$(subst __IOC__,$(1),$$(IOC_DEP_PATTERN))
+DIR_LIST      += $(BUILD_TOP)/iocBoot/$(1)
+
+expand: $(1).cfg $(BUILD_TOP)/iocBoot/$(1) $$($(1)_DEP_LIST)
+
+$$($(1)_DEP_LIST): $(1).cfg
+
+.PHONY: $(1)
+$(1):	$$(DIR_LIST) $$($(1)_DEP_LIST)
+	@$(MAKE) -C $(BUILD_TOP)/iocBoot/$(1)
+
+# Expand $(BUILD_TOP)/iocBoot/$(1)/Makefile
+$(BUILD_TOP)/iocBoot/$(1)/Makefile:      $(IOC_APPL_TOP)/iocBoot/templates/Makefile
+	@echo Expanding $$@
+	@$(EXPAND) -c $(1).cfg $$(<) $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	@chmod ug+w $$@
+
+# Expand $(BUILD_TOP)/iocBoot/$(1)/st.cmd
+$(BUILD_TOP)/iocBoot/$(1)/st.cmd:      $(IOC_APPL_TOP)/iocBoot/templates/st.cmd
+	@echo Expanding $$@
+	@$(EXPAND) -c $(1).cfg $$(<) $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	@chmod ug+w,a+x $$@
+
+# Expand $(BUILD_TOP)/iocBoot/$(1)/edm-$(1).cmd
+$(BUILD_TOP)/iocBoot/$(1)/edm-$(1).cmd: $(1).cfg
+	@echo Expanding $$@
+	@if [ -f $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd ]; then $(EXPAND) -c $(1).cfg $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP); else echo "#!/bin/sh" > $$@; echo "echo No $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd found!" >> $$@; fi
+	@chmod ug+w,a+x $$@
+
+# Create $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP
+$(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP:
+	@echo Setting IOC_APPL_TOP to $(IOC_APPL_TOP) for $(1)
+	@echo "IOC_APPL_TOP=$(IOC_APPL_TOP)" > $$@
+	@chmod ug+w $$@
+
+# Expand ioc.sub-arch and ioc.sub-req
+$(BUILD_TOP)/iocBoot/$(1)/$(1).%: $(IOC_APPL_TOP)/iocBoot/templates/ioc.%
+	@echo Expanding $$@
+	@$(EXPAND) -c $(1).cfg $$(<) $$(@) IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	@chmod ug+w $$@
+
+# Expand any *.sh files
+$(BUILD_TOP)/iocBoot/$(1)/%.sh: $(IOC_APPL_TOP)/iocBoot/templates/%.sh
+	@echo Expanding $$@
+	@$(EXPAND) -c $(1).cfg $$(<) $$(@) IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	@chmod ug+w $$@
+
+endef
+# End of EXPAND_template
+
+# Set the IOC list to use when we create the rules, targets and dependencies for each IOC
+ifneq ($(filter install expand,$(MAKECMDGOALS)),)
+IOC_LIST = $(patsubst %.cfg,%,$(IOC_CFG))
+else ifeq ($(strip $(MAKECMDGOALS)),)
+IOC_LIST = $(patsubst %.cfg,%,$(IOC_CFG))
+else
+IOC_LIST = $(filter ioc-%,$(MAKECMDGOALS))
+endif
+
+# Generate the expand rules, targets and dependencies for each IOC
+$(foreach IOC, $(IOC_LIST),                      \
+	$(eval $(call IOC_APPL_TOP_template,$(IOC))) \
+	$(eval $(call EXPAND_template,$(IOC)))       )
+
+# Install the top level Makefile from one of the ioc application top directories
+$(BUILD_TOP)/Makefile: $(IOC_APPL_TOP)/Makefile
+	@echo Installing $@
+	@cp -u $< $@
+	@chmod ug+w $@
+
+# Ditto for the iocBoot Makefile
+$(BUILD_TOP)/iocBoot/Makefile: $(IOC_APPL_TOP)/iocBoot/Makefile
+	@echo Installing $@
+	@cp -u $< $@
+	@chmod ug+w $@
+
+# Create $(BUILD_TOP)/IOC_APPL_TOP
+$(BUILD_TOP)/IOC_APPL_TOP:
+	@echo Creating IOC_APPL_TOP
+	@echo "IOC_APPL_TOP=$(IOC_APPL_TOP)" > $@
+	@chmod ug+w $@
+
+# Build rule for directories
+$(DIR_LIST):
+	mkdir -p $@
+	@touch $@
+
+# These are our source files
+# No need to look for implicit rules for these
+%/iocBoot/templates/ioc.sub-arch: ;
+%/iocBoot/templates/ioc.sub-req: ;
+%/iocBoot/templates/Makefile: ;
+%/iocBoot/templates/st.cmd: ;
+%/iocBoot/templates/edm-ioc.cmd: ;
+
+clean distclean realclean: expandclean
+
+expandclean:
+	-rm -rf $(BUILD_TOP)/archive
+	-rm -rf $(BUILD_TOP)/autosave
+	-rm -rf $(BUILD_TOP)/iocBoot
+	-rm -rf $(BUILD_TOP)/Makefile
+	-rm -rf $(BUILD_TOP)/IOC_APPL_TOP
+
