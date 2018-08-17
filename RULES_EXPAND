@@ -28,7 +28,7 @@ DIR_LIST += $(BUILD_TOP)/iocBoot
 default:	install
 all:		install
 
-.PHONY: install expand
+.PHONY: build install expand
 install: expand
 	@$(MAKE) -C $(BUILD_TOP) $@
 
@@ -55,6 +55,7 @@ IOC_DEP_PATTERN += $(addprefix $(BUILD_TOP)/iocBoot/__IOC__/, $$(IOC_DEP_SH))
 
 $(1)_DEP_LIST  = $$(subst __IOC__,$(1),$$(IOC_DEP_PATTERN))
 DIR_LIST      += $(BUILD_TOP)/iocBoot/$(1)
+.PHONY: $(BUILD_TOP)/iocBoot/$(1)
 
 expand: $(1).cfg $(BUILD_TOP)/iocBoot/$(1) $$($(1)_DEP_LIST)
 
@@ -142,6 +143,7 @@ $(DIR_LIST):
 
 # These are our source files
 # No need to look for implicit rules for these
+$(makefile): ;
 %/iocBoot/templates/ioc.sub-arch: ;
 %/iocBoot/templates/ioc.sub-req: ;
 %/iocBoot/templates/Makefile: ;

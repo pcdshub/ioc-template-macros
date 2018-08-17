@@ -1,7 +1,7 @@
 # Makefile to install the st.cmd into the correctly location.
 # Looks like this file is obsolete now.  BH 3/12/2016
 
-EXPAND    = /reg/g/pcds/controls/macro/expand
+EXPAND    = $(MACROS_DIR)/expand
 REALPATH  = /reg/g/pcds/controls/macro/realpath
 
 IOC_APPL_TOP = $(shell $(EXPAND) PARENT)
