@@ -657,14 +657,10 @@ def expand(cfg, lines, f, isfirst=False):
                     except:
                         pass
                 elif kw == "SUBSTR":
-                    print argm.group(1)
-                    print argm.group(2)
-                    print argm.group(3)
                     output = StringIO.StringIO()
                     expand(cfg, [argm.group(1)], output, isfirst)
                     value = output.getvalue()
                     output.close()
-                    print value
                     start  = argm.group(2)
                     try:
                         start  = cfg.ddict[start]
@@ -677,8 +673,6 @@ def expand(cfg, lines, f, isfirst=False):
                     except:
                         pass
                     finish = int(finish)
-                    print (start, finish)
-                    print value[start:finish]
                     f.write(value[start:finish])
                 else: # Must be "TRANSLATE"
                     try:
