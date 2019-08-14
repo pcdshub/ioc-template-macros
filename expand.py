@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+keyword      = re.compile("^(SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -506,6 +506,10 @@ def expand(cfg, lines, f, isfirst=False):
                         # If the $$ directive is the entire line, don't add a newline!
                         loc = 0;
                         i += 1
+            elif kw == "SUBSTR":
+                argm = ifargs.search(lines[i][loc:])
+                if argm != None:
+                    loc += argm.end(3)+1
             else:
                 argm = parens.search(lines[i][loc:])
                 if argm != None:
@@ -652,6 +656,30 @@ def expand(cfg, lines, f, isfirst=False):
                         f.write(fn[:fn.rindex('/')])
                     except:
                         pass
+                elif kw == "SUBSTR":
+                    print argm.group(1)
+                    print argm.group(2)
+                    print argm.group(3)
+                    output = StringIO.StringIO()
+                    expand(cfg, [argm.group(1)], output, isfirst)
+                    value = output.getvalue()
+                    output.close()
+                    print value
+                    start  = argm.group(2)
+                    try:
+                        start  = cfg.ddict[start]
+                    except:
+                        pass
+                    start = int(start)
+                    finish = argm.group(3)
+                    try:
+                        finish = cfg.ddict[finish]
+                    except:
+                        pass
+                    finish = int(finish)
+                    print (start, finish)
+                    print value[start:finish]
+                    f.write(value[start:finish])
                 else: # Must be "TRANSLATE"
                     try:
                         val = cfg.ddict[argm.group(1)].translate(string.maketrans(enumstring(argm.group(2)),
