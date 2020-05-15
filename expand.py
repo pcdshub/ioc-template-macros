@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+keyword      = re.compile("^(SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -47,7 +47,10 @@ operators = {ast.Add: operator.add,
              ast.RShift: operator.rshift,
              ast.BitOr: operator.or_,
              ast.BitAnd : operator.and_,
-             ast.BitXor: operator.xor}
+             ast.BitXor: operator.xor,
+             ast.USub: operator.neg,
+             ast.Invert: operator.not_
+}
 
 def myopen(file):
     try:
@@ -326,9 +329,11 @@ class config():
                 print "Skipping unknown line: %s" % l
         if ininst:
             self.finish_instance(iname, i, dd)
+        for (k,v) in nd.items():
+            d[k + ":TYPE"]  = v[0]
+            d[k + ":INDEX"] = v[1]
         self.idict = i
         self.ddict = d
-
 
     def eval_expr(self, expr):
         return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])
@@ -346,6 +351,8 @@ class config():
             return operators[type(node)]
         elif isinstance(node, ast.BinOp):
             return self.eval_(node.op)(self.eval_(node.left), self.eval_(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            return self.eval_(node.op)(self.eval_(node.operand))
         else:
             raise TypeError(node)
 
@@ -674,6 +681,25 @@ def expand(cfg, lines, f, isfirst=False):
                         pass
                     finish = int(finish)
                     f.write(value[start:finish])
+                elif kw == "NAME":
+                    s = argm.group(1).split(',')
+                    if len(s) != 2:
+                        print "Malformed $$NAME(%s) doesn't have two arguments!" % argm.group(1)
+                        sys.exit(1)
+                    try:
+                        s[0] = cfg.ddict[s[0]]
+                    except:
+                        pass
+                    try:
+                        s = cfg.ddict[s[0] + ":TYPE"] + s[1] + str(cfg.ddict[s[0] + ":INDEX"])
+                    except:
+                        print "Can't find $$NAME(%s)?" % argm.group(1)
+                        sys.exit(1)
+                    try:
+                        val = cfg.ddict[s]
+                        f.write(val)
+                    except:
+                        pass
                 else: # Must be "TRANSLATE"
                     try:
                         val = cfg.ddict[argm.group(1)].translate(string.maketrans(enumstring(argm.group(2)),
