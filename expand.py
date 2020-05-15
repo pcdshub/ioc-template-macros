@@ -640,7 +640,13 @@ def expand(cfg, lines, f, isfirst=False):
                     f.write(cnt)
                 elif kw == "CALC":
                     # Either $$CALC{expr} or $$CALC{expr,format}.
+                    # This is why we really need a full parser... what
+                    # if expr has something with a "," (such as $$NAME)?
+                    # We'll basically say if the first string has a '(',
+                    # then just assume the first kind.
                     args = argm.group(1).split(",")
+                    if '(' in args[0]:
+                        args = [argm.group(1)]
                     output = StringIO.StringIO()
                     expand(cfg, [args[0]], output, isfirst)
                     value = output.getvalue()
