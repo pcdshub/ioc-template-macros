@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT)\(|^(CALC)\{")
+keyword      = re.compile("^(SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -41,15 +41,21 @@ word         = re.compile("^([A-Za-z0-9_]*)")
 operators = {ast.Add: operator.add,
              ast.Sub: operator.sub,
              ast.Mult: operator.mul,
+             ast.Mod: operator.mod,
              ast.Div: operator.truediv,
              ast.Pow: operator.pow,
              ast.LShift : operator.lshift,
              ast.RShift: operator.rshift,
              ast.BitOr: operator.or_,
              ast.BitAnd : operator.and_,
-             ast.BitXor: operator.xor}
+             ast.BitXor: operator.xor,
+             ast.USub: operator.neg,
+             ast.Invert: operator.not_
+}
 
 def myopen(file):
+    if file == '-':
+        return sys.stdin
     try:
         fp = open(file)
         return fp
@@ -326,9 +332,11 @@ class config():
                 print "Skipping unknown line: %s" % l
         if ininst:
             self.finish_instance(iname, i, dd)
+        for (k,v) in nd.items():
+            d[k + ":TYPE"]  = v[0]
+            d[k + ":INDEX"] = v[1]
         self.idict = i
         self.ddict = d
-
 
     def eval_expr(self, expr):
         return self.eval_(ast.parse(expr).body[0].value) # Module(body=[Expr(value=...)])
@@ -346,6 +354,8 @@ class config():
             return operators[type(node)]
         elif isinstance(node, ast.BinOp):
             return self.eval_(node.op)(self.eval_(node.left), self.eval_(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            return self.eval_(node.op)(self.eval_(node.operand))
         else:
             raise TypeError(node)
 
@@ -506,6 +516,10 @@ def expand(cfg, lines, f, isfirst=False):
                         # If the $$ directive is the entire line, don't add a newline!
                         loc = 0;
                         i += 1
+            elif kw == "SUBSTR":
+                argm = ifargs.search(lines[i][loc:])
+                if argm != None:
+                    loc += argm.end(3)+1
             else:
                 argm = parens.search(lines[i][loc:])
                 if argm != None:
@@ -629,7 +643,13 @@ def expand(cfg, lines, f, isfirst=False):
                     f.write(cnt)
                 elif kw == "CALC":
                     # Either $$CALC{expr} or $$CALC{expr,format}.
+                    # This is why we really need a full parser... what
+                    # if expr has something with a "," (such as $$NAME)?
+                    # We'll basically say if the first string has a '(',
+                    # then just assume the first kind.
                     args = argm.group(1).split(",")
+                    if '(' in args[0]:
+                        args = [argm.group(1)]
                     output = StringIO.StringIO()
                     expand(cfg, [args[0]], output, isfirst)
                     value = output.getvalue()
@@ -650,6 +670,43 @@ def expand(cfg, lines, f, isfirst=False):
                         fn = argm.group(1)
                     try:
                         f.write(fn[:fn.rindex('/')])
+                    except:
+                        pass
+                elif kw == "SUBSTR":
+                    output = StringIO.StringIO()
+                    expand(cfg, [argm.group(1)], output, isfirst)
+                    value = output.getvalue()
+                    output.close()
+                    start  = argm.group(2)
+                    try:
+                        start  = cfg.ddict[start]
+                    except:
+                        pass
+                    start = int(start)
+                    finish = argm.group(3)
+                    try:
+                        finish = cfg.ddict[finish]
+                    except:
+                        pass
+                    finish = int(finish)
+                    f.write(value[start:finish])
+                elif kw == "NAME":
+                    s = argm.group(1).split(',')
+                    if len(s) != 2:
+                        print "Malformed $$NAME(%s) doesn't have two arguments!" % argm.group(1)
+                        sys.exit(1)
+                    try:
+                        s[0] = cfg.ddict[s[0]]
+                    except:
+                        pass
+                    try:
+                        s = cfg.ddict[s[0] + ":TYPE"] + s[1] + str(cfg.ddict[s[0] + ":INDEX"])
+                    except:
+                        print "Can't find $$NAME(%s)?" % argm.group(1)
+                        sys.exit(1)
+                    try:
+                        val = cfg.ddict[s]
+                        f.write(val)
                     except:
                         pass
                 else: # Must be "TRANSLATE"
@@ -721,7 +778,10 @@ if __name__ == '__main__':
             print e
             sys.exit(1)
         lines=tplFile.readlines()
-        fp = open(av[1], 'w')
+        if av[1] == '-':
+            fp = sys.stdout
+        else:
+            fp = open(av[1], 'w')
         expand(cfg, lines, fp)
         fp.close()
         sys.exit(0)
