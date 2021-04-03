@@ -1,8 +1,8 @@
 #
 # RULES_EXPAND
 # Creates build rules needed to expand templated IOC config files
-#
-EXPAND       = /reg/g/pcds/controls/macro/expand
+RULES_EXPAND := $(lastword $(MAKEFILE_LIST))
+EXPAND       := $(dir $(RULES_EXPAND))/expand
 
 ifeq ($(BUILD_TOP),)
 BUILD_TOP = build
