@@ -1,5 +1,5 @@
 #!/bin/bash
-export PSPKG_RELEASE=controls-0.0.6
+export PSPKG_RELEASE=pkg_mgr-0.0.1
 export PATH=/usr/local/bin:/bin:/usr/bin
 unset LD_LIBRARY_PATH
 unset PYTHONPATH
