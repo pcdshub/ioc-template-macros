@@ -2,7 +2,8 @@
 # Looks like this file is obsolete now.  BH 3/12/2016
 
 EXPAND    = $(MACROS_DIR)/expand
-REALPATH  = /reg/g/pcds/controls/macro/realpath
+#REALPATH  = /reg/g/pcds/controls/macro/realpath
+#REALPATH  = realpath
 
 IOC_APPL_TOP = $(shell $(EXPAND) PARENT)
 
