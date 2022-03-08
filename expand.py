@@ -346,7 +346,13 @@ class config():
             return node.n
         elif isinstance(node, ast.Name):
             try:
-                x = int(self.ddict[node.id])
+                n = self.ddict[node.id]
+                if n[:2] == '0x':
+                    x = int(self.ddict[node.id], 16)
+                elif n[0] == '0':
+                    x = int(self.ddict[node.id], 8)
+                else:
+                    x = int(self.ddict[node.id], 10)
             except:
                 x = 0
             return x
@@ -520,6 +526,11 @@ def expand(cfg, lines, f, isfirst=False):
                 argm = ifargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+1
+                else:
+                    argm = dbargs.search(lines[i][loc:])
+                    if argm != None:
+                        loc += argm.end(2)+1
+                        kw = "TAIL"
             else:
                 argm = parens.search(lines[i][loc:])
                 if argm != None:
@@ -690,6 +701,18 @@ def expand(cfg, lines, f, isfirst=False):
                         pass
                     finish = int(finish)
                     f.write(value[start:finish])
+                elif kw == "TAIL":
+                    output = StringIO.StringIO()
+                    expand(cfg, [argm.group(1)], output, isfirst)
+                    value = output.getvalue()
+                    output.close()
+                    start  = argm.group(2)
+                    try:
+                        start  = cfg.ddict[start]
+                    except:
+                        pass
+                    start = int(start)
+                    f.write(value[start:])
                 elif kw == "NAME":
                     s = argm.group(1).split(',')
                     if len(s) != 2:
