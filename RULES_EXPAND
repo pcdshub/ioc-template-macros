@@ -82,6 +82,12 @@ $(BUILD_TOP)/iocBoot/$(1)/edm-$(1).cmd: $(1).cfg
 	@if [ -f $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd ]; then $(EXPAND) -c $(1).cfg $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP); else echo "#!/bin/sh" > $$@; echo "echo No $(IOC_APPL_TOP)/iocBoot/templates/edm-ioc.cmd found!" >> $$@; fi
 	@chmod ug+w,a+x $$@
 
+# Expand $(BUILD_TOP)/iocBoot/$(1)/pydm-$(1).cmd
+$(BUILD_TOP)/iocBoot/$(1)/pydm-$(1).cmd: $(1).cfg
+	@echo Expanding $$@
+	@if [ -f $(IOC_APPL_TOP)/iocBoot/templates/pydm-ioc.cmd ]; then $(EXPAND) -c $(1).cfg $(IOC_APPL_TOP)/iocBoot/templates/pydm-ioc.cmd $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP); else echo "#!/bin/sh" > $$@; echo "echo No $(IOC_APPL_TOP)/iocBoot/templates/pydm-ioc.cmd found!" >> $$@; fi
+	@chmod ug+w,a+x $$@
+
 # Create $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP
 $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP:
 	@echo Setting IOC_APPL_TOP to $(IOC_APPL_TOP) for $(1)
