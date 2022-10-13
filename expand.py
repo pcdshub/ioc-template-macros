@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC)\{")
+keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -41,6 +41,7 @@ word         = re.compile("^([A-Za-z0-9_]*)")
 operators = {ast.Add: operator.add,
              ast.Sub: operator.sub,
              ast.Mult: operator.mul,
+             ast.Mod: operator.mod,
              ast.Div: operator.truediv,
              ast.Pow: operator.pow,
              ast.LShift : operator.lshift,
@@ -53,6 +54,8 @@ operators = {ast.Add: operator.add,
 }
 
 def myopen(file):
+    if file == '-':
+        return sys.stdin
     try:
         fp = open(file)
         return fp
@@ -343,7 +346,13 @@ class config():
             return node.n
         elif isinstance(node, ast.Name):
             try:
-                x = int(self.ddict[node.id])
+                n = self.ddict[node.id]
+                if n[:2] == '0x':
+                    x = int(self.ddict[node.id], 16)
+                elif n[0] == '0':
+                    x = int(self.ddict[node.id], 8)
+                else:
+                    x = int(self.ddict[node.id], 10)
             except:
                 x = 0
             return x
@@ -517,6 +526,11 @@ def expand(cfg, lines, f, isfirst=False):
                 argm = ifargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+1
+                else:
+                    argm = dbargs.search(lines[i][loc:])
+                    if argm != None:
+                        loc += argm.end(2)+1
+                        kw = "TAIL"
             else:
                 argm = parens.search(lines[i][loc:])
                 if argm != None:
@@ -669,6 +683,14 @@ def expand(cfg, lines, f, isfirst=False):
                         f.write(fn[:fn.rindex('/')])
                     except:
                         pass
+                elif kw == "ROOT":
+                    try:
+                        fn = cfg.ddict[argm.group(1)]
+                    except:
+                        fn = argm.group(1)
+                    if '.' in fn:
+                        fn = fn[:fn.index('.')]
+                    f.write(fn)
                 elif kw == "SUBSTR":
                     output = StringIO.StringIO()
                     expand(cfg, [argm.group(1)], output, isfirst)
@@ -687,6 +709,18 @@ def expand(cfg, lines, f, isfirst=False):
                         pass
                     finish = int(finish)
                     f.write(value[start:finish])
+                elif kw == "TAIL":
+                    output = StringIO.StringIO()
+                    expand(cfg, [argm.group(1)], output, isfirst)
+                    value = output.getvalue()
+                    output.close()
+                    start  = argm.group(2)
+                    try:
+                        start  = cfg.ddict[start]
+                    except:
+                        pass
+                    start = int(start)
+                    f.write(value[start:])
                 elif kw == "NAME":
                     s = argm.group(1).split(',')
                     if len(s) != 2:
@@ -775,7 +809,10 @@ if __name__ == '__main__':
             print e
             sys.exit(1)
         lines=tplFile.readlines()
-        fp = open(av[1], 'w')
+        if av[1] == '-':
+            fp = sys.stdout
+        else:
+            fp = open(av[1], 'w')
         expand(cfg, lines, fp)
         fp.close()
         sys.exit(0)
