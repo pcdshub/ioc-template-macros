@@ -51,7 +51,7 @@ expandAll: $(TEMPS) $(EXPAND) config
 	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-arch  $(IOC).sub-arch $(EXPAND_FLAGS)
 	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/ioc.sub-req   $(IOC).sub-req  $(EXPAND_FLAGS)
 	$(EXPAND) $(IOC_APPL_TOP)/iocBoot/templates/st.cmd        st.cmd          $(EXPAND_FLAGS)
-	chmod guo+x st.cmd
+	-chmod guo+x st.cmd
 
 clean realclean:: expandclean
 
