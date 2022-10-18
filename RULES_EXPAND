@@ -18,6 +18,7 @@ IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/Makefile
 IOC_DEP_PATTERN  += $(BUILD_TOP)/IOC_APPL_TOP
 IOC_DEP_PATTERN  += $(BUILD_TOP)/Makefile
 IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/edm-__IOC__.cmd
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/pydm-__IOC__.cmd
 
 
 DIR_LIST += $(BUILD_TOP)
@@ -155,6 +156,7 @@ $(makefile): ;
 %/iocBoot/templates/Makefile: ;
 %/iocBoot/templates/st.cmd: ;
 %/iocBoot/templates/edm-ioc.cmd: ;
+%/iocBoot/templates/pydm-ioc.cmd: ;
 
 clean distclean realclean: expandclean
 
