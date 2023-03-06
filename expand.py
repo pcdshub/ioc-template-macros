@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC)\{")
+keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC|IFCALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -362,6 +362,11 @@ class config():
             return self.eval_(node.op)(self.eval_(node.left), self.eval_(node.right))
         elif isinstance(node, ast.UnaryOp):
             return self.eval_(node.op)(self.eval_(node.operand))
+        elif isinstance(node, ast.IfExp):
+            if self.eval_(node.test):
+                return self.eval_(node.body)
+            else:
+                return self.eval_(node.orelse)
         else:
             raise TypeError(node)
 
@@ -500,7 +505,7 @@ def expand(cfg, lines, f, isfirst=False):
                 argm = trargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+2
-            elif kw == "CALC":
+            elif kw == "CALC" or kw == "IFCALC":
                 argm = brackets.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(1)+1
@@ -574,15 +579,29 @@ def expand(cfg, lines, f, isfirst=False):
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]
-                elif kw == "IF" or kw == "DIF":
-                    iname = argm.group(1)
+                elif kw == "IF" or kw == "DIF" or kw == "IFCALC":
+                    if kw == "IFCALC":
+                        iname = "CALC"
+                        output = StringIO.StringIO()
+                        expand(cfg, [argm.group(1)], output, isfirst)
+                        value = output.getvalue()
+                        output.close()
+                        try:
+                            testv = cfg.eval_expr(value)
+                        except:
+                            testv = 0
+                    else:
+                        iname = argm.group(1)
                     if kw == "DIF":
                         dif = True
                         eqval = argm.group(2)
                     else:
                         dif = False
                     try:
-                        ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
+                        if kw == "IFCALC":
+                            ifre = re.compile("(.*?)\$\$IFCALC\{([^}]*?)\}")
+                        else:
+                            ifre = re.compile("(.*?)\$\$IF\(" + iname + "(\))")
                         endre = re.compile("(.*?)\$\$ENDIF\(" + iname + "(\))")
                         elsere = re.compile("(.*?)\$\$ELSE\(" + iname + "(\))")
                     except:
@@ -593,11 +612,13 @@ def expand(cfg, lines, f, isfirst=False):
                         print "Cannot find $$ENDIF(%s)?" % iname
                         sys.exit(1)
                     elset = searchforend(t[0], elsere, ifre, endre, 0, 0)
-                    try:
-                        v = cfg.ddict[iname]
-                    except:
-                        v = ""
-                    if (dif and v == eqval) or ((not dif) and v != ""):
+                    if kw != "IFCALC":
+                        try:
+                            v = cfg.ddict[iname]
+                        except:
+                            v = ""
+                        testv = 1 if ((dif and v == eqval) or ((not dif) and v != "")) else 0
+                    if testv != 0:
                         # True, do the if!
                         if elset != None:
                             newlines = elset[0]
@@ -614,6 +635,11 @@ def expand(cfg, lines, f, isfirst=False):
                     loc = t[2]
                 elif kw == "TIF":
                     iname = argm.group(1)
+                    if "$$" in iname:
+                        output = StringIO.StringIO()
+                        expand(cfg, [iname], output, isfirst)
+                        iname = output.getvalue()
+                        output.close()
                     newlines = []
                     try:
                         v = cfg.ddict[iname]
