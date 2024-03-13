@@ -73,6 +73,31 @@ def myopen(file):
     return None
 
 class config():
+    """
+        This is the class that handles the configuration namespace.
+
+        It includes functions to read configuration files, add new
+        instances and definitions, and evaluate numeric expressions
+        in the current environment.
+
+        Member variables:
+            ddict - The variable dictionary mapping from names to values.
+            idict - The instance dictionary mapping from instance type
+                    names to lists of instances.
+            assigns - A stack of lists of variables that have been $$ASSIGNED.
+
+        Methods:
+            read_config(filename, extra_input) - Read in the configuration
+                   in filename, prefixing it with the list of extra_input.
+
+
+            assign(varname, value) - $$ASSIGN the varname to the specified
+                   value, adding it to the top assigns list as well.
+
+
+            eval_expr(expr) - Evaluate the specified expression text in the
+                   current context.
+    """
     def __init__(self):
         self.path = os.getcwd()
         self.dirname = self.path.split('/')[-1]
@@ -440,6 +465,10 @@ def searchforend(lines, endre, lb, rb, i, l):
     return None
 
 def rename_index(d):
+    """
+        When entering a new loop, rename the existing INDEX/INDEXn variables to
+        be INDEX1/INDEXn+1.
+    """
     new = []
     val = []
     for k in d.keys():
@@ -481,6 +510,19 @@ def enumstring(s):
     return out
 
 def expand(cfg, lines, f, isfirst=False):
+    """
+        expand is where the magic happens.
+
+        cfg is a config object specifying the current variable values and instances.
+
+        lines is a list of strings to be expanded.
+
+        f is an output file (or StringIO) to be written.
+
+        isfirst is a flag indicating that we are actually processing the config file,
+        and so $$INCLUDE might fail until we evaluate enough variables to properly
+        expand the filename.
+    """
     i = 0
     loc = 0
     while i < len(lines):
