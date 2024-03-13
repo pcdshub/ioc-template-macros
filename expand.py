@@ -78,7 +78,7 @@ class config():
         self.dirname = self.path.split('/')[-1]
         self.ddict = {}
         self.idict = {}
-        self.assigns = set([])
+        self.assigns = [set([])]
 
     def create_instance(self, iname, id, idict, ndict):
         try:
@@ -98,7 +98,7 @@ class config():
 
     def assign(self, dname, value):
         self.ddict[dname] = value
-        self.assigns.add(dname)
+        self.assigns[-1].add(dname)
 
     def process_config_line(self, l, d):
         l = l.strip()
@@ -577,15 +577,17 @@ def expand(cfg, lines, f, isfirst=False):
                             cnt = 0
                         ilist = [{"INDEX": str(n)} for n in range(cnt)]
                     olddict = cfg.ddict
+                    cfg.assigns.append(set([]))  # Push a new assignment context.
                     for inst in ilist:
                         cfg.ddict = rename_index(olddict.copy())
                         cfg.ddict.update(inst)
                         expand(cfg, t[0], f, isfirst)
                         # Now, within the $$LOOP, we might have done some $$ASSIGNs.
                         # We need to pull these back into olddict!
-                        for dname in cfg.assigns:
+                        for dname in cfg.assigns[-1]:
                             olddict[dname] = cfg.ddict[dname]
-                        cfg.assigns = set([])
+                        cfg.assigns[-1] = set([])
+                    cfg.assigns = cfg.assigns[:-1] # Pop the assignment context for the loop.
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]

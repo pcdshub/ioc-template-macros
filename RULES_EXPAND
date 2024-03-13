@@ -99,7 +99,7 @@ $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP:
 # Expand ioc.sub-arch and ioc.sub-req
 $(BUILD_TOP)/iocBoot/$(1)/$(1).%: $(IOC_APPL_TOP)/iocBoot/templates/ioc.%
 	@echo Expanding $$@
-	@$(EXPAND) -c $(1).cfg $$(<) $$(@) IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
+	$(EXPAND) -c $(1).cfg $$(<) $$(@) IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP)
 	@-chmod ug+w $$@
 
 # Expand any *.sh files
