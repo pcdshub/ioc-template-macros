@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC|IFCALC)\{")
+keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(ASSIGN|CALC|IFCALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -78,6 +78,7 @@ class config():
         self.dirname = self.path.split('/')[-1]
         self.ddict = {}
         self.idict = {}
+        self.assigns = set([])
 
     def create_instance(self, iname, id, idict, ndict):
         try:
@@ -94,6 +95,10 @@ class config():
 
     def finish_instance(self, iname, idict, dd):
         idict[iname].append(dd)
+
+    def assign(self, dname, value):
+        self.ddict[dname] = value
+        self.assigns.add(dname)
 
     def process_config_line(self, l, d):
         l = l.strip()
@@ -505,7 +510,7 @@ def expand(cfg, lines, f, isfirst=False):
                 argm = trargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+2
-            elif kw == "CALC" or kw == "IFCALC":
+            elif kw == "CALC" or kw == "IFCALC" or kw == "ASSIGN":
                 argm = brackets.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(1)+1
@@ -576,6 +581,11 @@ def expand(cfg, lines, f, isfirst=False):
                         cfg.ddict = rename_index(olddict.copy())
                         cfg.ddict.update(inst)
                         expand(cfg, t[0], f, isfirst)
+                        # Now, within the $$LOOP, we might have done some $$ASSIGNs.
+                        # We need to pull these back into olddict!
+                        for dname in cfg.assigns:
+                            olddict[dname] = cfg.ddict[dname]
+                        cfg.assigns = set([])
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]
@@ -678,6 +688,19 @@ def expand(cfg, lines, f, isfirst=False):
                     except:
                         cnt = "0"
                     f.write(cnt)
+                elif kw == "ASSIGN":
+                    args = argm.group(1).split(",")
+                    output = StringIO.StringIO()
+                    expand(cfg, [args[1]], output, isfirst)
+                    value = output.getvalue()
+                    output.close()
+                    try:
+                        v = cfg.eval_expr(value)
+                    except:
+                        v = 0
+                    cfg.assign(args[0], str(v))
+                    if lines[i][loc] == '\n':
+                        loc = loc + 1
                 elif kw == "CALC":
                     # Either $$CALC{expr} or $$CALC{expr,format}.
                     # This is why we really need a full parser... what
