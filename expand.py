@@ -30,7 +30,7 @@ prmeqqq = re.compile("^([A-Za-z_][A-Za-z0-9_]*)='([^']*)'(,)")
 inc     = re.compile("^\$\$INCLUDE\((.*)\)")
 idxre   = re.compile("^INDEX([0-9]*)")
 doubledollar = re.compile("^(.*?)\$\$")
-keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(CALC|IFCALC)\{")
+keyword      = re.compile("^(ROOT|SUBSTR|UP|LOOP|IF|INCLUDE|TRANSLATE|COUNT|NAME)\(|^(ASSIGN|CALC|IFCALC)\{")
 parens       = re.compile("^\(([^)]*?)\)")
 brackets     = re.compile("^\{([^}]*?)\}")
 trargs       = re.compile('^\(([^,]*?),"([^"]*?)","([^"]*?)"\)')
@@ -73,11 +73,37 @@ def myopen(file):
     return None
 
 class config():
+    """
+        This is the class that handles the configuration namespace.
+
+        It includes functions to read configuration files, add new
+        instances and definitions, and evaluate numeric expressions
+        in the current environment.
+
+        Member variables:
+            ddict - The variable dictionary mapping from names to values.
+            idict - The instance dictionary mapping from instance type
+                    names to lists of instances.
+            assigns - A stack of lists of variables that have been $$ASSIGNED.
+
+        Methods:
+            read_config(filename, extra_input) - Read in the configuration
+                   in filename, prefixing it with the list of extra_input.
+
+
+            assign(varname, value) - $$ASSIGN the varname to the specified
+                   value, adding it to the top assigns list as well.
+
+
+            eval_expr(expr) - Evaluate the specified expression text in the
+                   current context.
+    """
     def __init__(self):
         self.path = os.getcwd()
         self.dirname = self.path.split('/')[-1]
         self.ddict = {}
         self.idict = {}
+        self.assigns = [set([])]
 
     def create_instance(self, iname, id, idict, ndict):
         try:
@@ -94,6 +120,10 @@ class config():
 
     def finish_instance(self, iname, idict, dd):
         idict[iname].append(dd)
+
+    def assign(self, dname, value):
+        self.ddict[dname] = value
+        self.assigns[-1].add(dname)
 
     def process_config_line(self, l, d):
         l = l.strip()
@@ -435,6 +465,10 @@ def searchforend(lines, endre, lb, rb, i, l):
     return None
 
 def rename_index(d):
+    """
+        When entering a new loop, rename the existing INDEX/INDEXn variables to
+        be INDEX1/INDEXn+1.
+    """
     new = []
     val = []
     for k in d.keys():
@@ -476,6 +510,19 @@ def enumstring(s):
     return out
 
 def expand(cfg, lines, f, isfirst=False):
+    """
+        expand is where the magic happens.
+
+        cfg is a config object specifying the current variable values and instances.
+
+        lines is a list of strings to be expanded.
+
+        f is an output file (or StringIO) to be written.
+
+        isfirst is a flag indicating that we are actually processing the config file,
+        and so $$INCLUDE might fail until we evaluate enough variables to properly
+        expand the filename.
+    """
     i = 0
     loc = 0
     while i < len(lines):
@@ -505,7 +552,7 @@ def expand(cfg, lines, f, isfirst=False):
                 argm = trargs.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(3)+2
-            elif kw == "CALC" or kw == "IFCALC":
+            elif kw == "CALC" or kw == "IFCALC" or kw == "ASSIGN":
                 argm = brackets.search(lines[i][loc:])
                 if argm != None:
                     loc += argm.end(1)+1
@@ -572,10 +619,17 @@ def expand(cfg, lines, f, isfirst=False):
                             cnt = 0
                         ilist = [{"INDEX": str(n)} for n in range(cnt)]
                     olddict = cfg.ddict
+                    cfg.assigns.append(set([]))  # Push a new assignment context.
                     for inst in ilist:
                         cfg.ddict = rename_index(olddict.copy())
                         cfg.ddict.update(inst)
                         expand(cfg, t[0], f, isfirst)
+                        # Now, within the $$LOOP, we might have done some $$ASSIGNs.
+                        # We need to pull these back into olddict!
+                        for dname in cfg.assigns[-1]:
+                            olddict[dname] = cfg.ddict[dname]
+                        cfg.assigns[-1] = set([])
+                    cfg.assigns = cfg.assigns[:-1] # Pop the assignment context for the loop.
                     cfg.ddict = olddict
                     i = t[1]
                     loc = t[2]
@@ -678,6 +732,16 @@ def expand(cfg, lines, f, isfirst=False):
                     except:
                         cnt = "0"
                     f.write(cnt)
+                elif kw == "ASSIGN":
+                    args = argm.group(1).split(",")
+                    output = StringIO.StringIO()
+                    expand(cfg, [args[1]], output, isfirst)
+                    value = output.getvalue()
+                    output.close()
+                    v = cfg.eval_expr(value)   # Yeah, if this isn't valid, just let it crash!
+                    cfg.assign(args[0], str(v))
+                    if lines[i][loc] == '\n':
+                        loc = loc + 1
                 elif kw == "CALC":
                     # Either $$CALC{expr} or $$CALC{expr,format}.
                     # This is why we really need a full parser... what
