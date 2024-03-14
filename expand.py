@@ -738,10 +738,7 @@ def expand(cfg, lines, f, isfirst=False):
                     expand(cfg, [args[1]], output, isfirst)
                     value = output.getvalue()
                     output.close()
-                    try:
-                        v = cfg.eval_expr(value)
-                    except:
-                        v = 0
+                    v = cfg.eval_expr(value)   # Yeah, if this isn't valid, just let it crash!
                     cfg.assign(args[0], str(v))
                     if lines[i][loc] == '\n':
                         loc = loc + 1
