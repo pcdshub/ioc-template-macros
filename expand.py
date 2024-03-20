@@ -740,7 +740,7 @@ def expand(cfg, lines, f, isfirst=False):
                     output.close()
                     v = cfg.eval_expr(value)   # Yeah, if this isn't valid, just let it crash!
                     cfg.assign(args[0], str(v))
-                    if lines[i][loc] == '\n':
+                    if loc < len(lines[i]) and lines[i][loc] == '\n':
                         loc = loc + 1
                 elif kw == "CALC":
                     # Either $$CALC{expr} or $$CALC{expr,format}.
