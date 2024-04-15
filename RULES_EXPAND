@@ -19,6 +19,7 @@ IOC_DEP_PATTERN  += $(BUILD_TOP)/IOC_APPL_TOP
 IOC_DEP_PATTERN  += $(BUILD_TOP)/Makefile
 IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/edm-__IOC__.cmd
 IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/pydm-__IOC__.cmd
+IOC_DEP_PATTERN  += $(BUILD_TOP)/iocBoot/__IOC__/launchgui-__IOC__.cmd
 
 
 DIR_LIST += $(BUILD_TOP)
@@ -90,6 +91,12 @@ $(BUILD_TOP)/iocBoot/$(1)/pydm-$(1).cmd: $(1).cfg
 	@if [ -f $(IOC_APPL_TOP)/iocBoot/templates/pydm-ioc.cmd ]; then $(EXPAND) -c $(1).cfg $(IOC_APPL_TOP)/iocBoot/templates/pydm-ioc.cmd $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP); else echo "#!/bin/sh" > $$@; echo "echo No $(IOC_APPL_TOP)/iocBoot/templates/pydm-ioc.cmd found!" >> $$@; fi
 	@-chmod ug+w,a+x $$@
 
+# Expand $(BUILD_TOP)/iocBoot/$(1)/launchgui-$(1).cmd
+$(BUILD_TOP)/iocBoot/$(1)/launchgui-$(1).cmd: $(1).cfg
+	@echo Expanding $$@
+	@if [ -f $(IOC_APPL_TOP)/iocBoot/templates/launchgui-ioc.cmd ]; then $(EXPAND) -c $(1).cfg $(IOC_APPL_TOP)/iocBoot/templates/launchgui-ioc.cmd $$@ IOCNAME=$(1) TOP=$(BUILD_TOP_ABS) IOCTOP=$(IOC_APPL_TOP); else echo "#!/bin/sh" > $$@; echo "echo No $(IOC_APPL_TOP)/iocBoot/templates/launchgui-ioc.cmd found!" >> $$@; fi
+	@-chmod ug+w,a+x $$@
+
 # Create $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP
 $(BUILD_TOP)/iocBoot/$(1)/IOC_APPL_TOP:
 	@echo Setting IOC_APPL_TOP to $(IOC_APPL_TOP) for $(1)
@@ -157,6 +164,7 @@ $(makefile): ;
 %/iocBoot/templates/st.cmd: ;
 %/iocBoot/templates/edm-ioc.cmd: ;
 %/iocBoot/templates/pydm-ioc.cmd: ;
+%/iocBoot/templates/launchgui-ioc.cmd: ;
 
 clean distclean realclean: expandclean
 
