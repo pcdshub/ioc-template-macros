@@ -1,3 +1,54 @@
+## ioc-template-macros
+`ioc-template-macros` is a repo that provides the following tools for building templated IOCs:
+- `RULES_EXPAND`: a file to include in a templated IOC `Makefile` such that when we `make` that IOC it uses this repo to expand the templates. A typical templated IOC `Makefile` is something like:
+```
+# SLAC PCDS Makefile for building templated IOC instances
+IOC_CFG  += $(wildcard *.cfg)
+include /reg/g/pcds/controls/macro/RULES_EXPAND
+```
+- `expand`: a shell script that sets up a Python environment to run `expand.py`
+- `expand.py`: a shell script that reads from config files and uses the data within them to expand IOC templates.
+
+## API
+
+The `expand` script has two supported forms. There are others but they are not well understood by this readme writer:
+
+```
+expand -c CONFIG_FILE KEYWORD
+expand -c CONFIG_FILE TEMPLATE_FILE OUTPUT_FILE
+```
+
+The first form finds the value of a keyword from the config file and sends it to stdout.
+
+For example, if your config file is:
+
+```
+RELEASE = /some/path
+ENGINEER = somebody
+```
+
+And you run:
+
+```
+expand -d path_to_that_file.cfg ENGINEER
+```
+
+Then "somebody" would be sent to stdout (with a trailing newline).
+This is used in RULES_EXPAND to get the RELEASE path.
+
+Note that you can use macros in your cfg file too, and they will be expanded here.
+Some special environment variables such as PATH are also supported.
+
+The second form uses the config file and the template file to create an output file.
+Values from the config file will be referred to in template and will ultimately be used
+to create a fully-formed output.
+
+Typically, templates come from common IOCs and
+config files come from hutch-specific IOCs that reference the common IOC.
+
+
+## Template Macro Language
+
 All of the macro commands in the template files begin with "$$".  These can be:
     $$VAR or $$(VAR)
 	- VAR is a variable name that is evaluated and inserted.
