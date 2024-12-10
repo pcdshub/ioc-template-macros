@@ -25,11 +25,14 @@ logger = logging.getLogger(__name__)
 # or e.g. IOC name duplication that creates ambiguity.
 BANNED_IOC_TYPES = [
     "edtCam",  # not used any more and lots of IOC name duplications come from it
+    "hpi_6012",  # most recent build has a missing file so we can't check against it
     "gigEcam",  # annoying typo breaks some things (should have been gigECam)
     "leviton",  # renamed to pdu_snmp, also similar name typo hell
     "Leviton",  # renamed to pdu_snmp, also similar name typo hell
     "Levitons",  # renamed to pdu_snmp, also similar name typo hell
     "optics-notepad",  # renamed to optics-pitch-notepad
+    "pnccd",  # very old, not used, has super old path names that are a distraction
+    "RohdeSchwartzNGPS",  # pnccd support IOC with same issues as pnccd ioc
     "topas",  # latest release broken (failed build), not deployed in iocmanager
     "tricatt",  # typo (tricam) and failed build
 ]
@@ -40,10 +43,12 @@ BANNED_IOC_NAMES = [
     "ioc-cxi-scope-portable01",
     "ioc-cxi-scope-portable02",
     # These IOCs' releases were hand-edited...
+    "ioc-cxi-setra",
     "ioc-las-ftl-mcs2-01",
     "ioc-las-ftl-mcs2-02",
     "ioc-mfx-hera-smc100",
     "ioc-tmo-mcs2-01",
+    "ioc-xpp-ensemble-01",
 ]
 # Focus on the targets of expand.py from RULES_EXPAND
 # Avoid other potentially large files
