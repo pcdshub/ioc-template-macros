@@ -53,8 +53,15 @@ def test_rules_expand(tmp_path: pathlib.Path, target: str, expected: list[int]):
             bld_path = ioc_bld_path / filename
             with open(bld_path, "r") as fd:
                 text = fd.read().splitlines()
+            # Did each of the templateable files get templated?
             assert text[0] == "Unit test"
             assert text[1] == "pytest"
             assert text[2] == f"IOC:TST:UNITTEST{num}"
+        # Did IOC_APPL_TOP get created with the correct contents?
+        with open(ioc_bld_path / "IOC_APPL_TOP", "r") as fd:
+            text = fd.read().strip()
+        assert text == f"IOC_APPL_TOP={children_dir.parent}"
+        # Did the Makefile get copied over?
         assert (ioc_bld_path / "Makefile").exists()
+        # Did the inner Makefile get run?
         assert (ioc_bld_path / "we_ran_make.txt").exists()
