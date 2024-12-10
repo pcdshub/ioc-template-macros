@@ -36,8 +36,8 @@ All of the macro commands in the template files begin with "$$".  These can be:
         - Process the contents of the FILENAME.
     $$CALC{EXPRESSION} or $$CALC{EXPRESSION,FORMAT}
 	- NOTE THE BRACKETS!!!  This allows arbitrary arithmetic.  The EXPRESSION
-	  is expanded, and then evaluated as a mathematical expression.  Any 
-	  undefined atom is assumed to be zero.  Atoms within the expression do 
+	  is expanded, and then evaluated as a mathematical expression.  Any
+	  undefined atom is assumed to be zero.  Atoms within the expression do
 	  not need to be prefixed by $$, but maybe.  (They should be if within a
 	  $$LOOP inside the expression.)  The result is output as a decimal number,
 	  or using the given format if one was given.
@@ -75,7 +75,7 @@ For example, if we have:
     TEST:E(X=Z)
     A(B=C,D=F,E0)
     A(B=Q,D=R,TEST)
-    
+
 Then we have defined global symbols $$EX0 = Y, $$EX1 = Z, $$AB0 = C, $$AD0 = F,
 $$AB1 = Q and $$AD1 = R.  If we $$LOOP(A), then within the body of the loop,
 we will have $$B = C, $$D = F, and $$EX = Y when $$INDEX is 0, and $$B = Q,
@@ -116,9 +116,9 @@ To clarify this, a config file such as:
     ENGINEER=Michael Browne (mcbrowne)
     LOCATION=MEC:R64A:24
     IOC_PV=IOC:MEC:IMB02
-    
+
     EVR(NAME=MEC:XT2:EVR:01,TYPE=PMC)
-    
+
     IPIMB(NAME=MEC:XT2:IPM:02,PORT=/dev/ttyPS3,BLDID=23,EVR0,TRIG=0)
     IPIMB(NAME=MEC:XT2:PIM:02,PORT=/dev/ttyPS2,BLDID=42,EVR0,TRIG=0)
     IPIMB(NAME=MEC:XT2:IPM:03,PORT=/dev/ttyPS1,BLDID=24,EVR0,TRIG=0)
@@ -130,11 +130,11 @@ could be written:
     ENGINEER   Michael Browne (mcbrowne)
     LOCATION   MEC:R64A:24
     IOC_PV     IOC:MEC:IMB02
-    
+
     INSTANCE EVR
         NAME       MEC:XT2:EVR:01
         TYPE       PMC
-    
+
     INSTANCE IPIMB
         NAME       MEC:XT2:IPM:02
         PORT       /dev/ttyPS3
