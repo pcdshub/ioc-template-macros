@@ -13,7 +13,7 @@ from .conftest import pushd
         ("ioc-tst-unittest1", [1]),
         ("ioc-tst-unittest2", [2]),
         ("ioc-tst-unittest3", [3]),
-        ("all", [1, 2, 3]),
+        ("", [1, 2, 3]),
     ],
 )
 def test_rules_expand(tmp_path: pathlib.Path, target: str, expected: list[int]):
@@ -33,7 +33,10 @@ def test_rules_expand(tmp_path: pathlib.Path, target: str, expected: list[int]):
         fd.write("IOC_CFG += $(wildcard *.cfg)\n")
         fd.write(f"include {rules_expand}\n")
     with pushd(children_dir):
-        subprocess.run(["make", target], check=True)
+        args = ["make"]
+        if target:
+            args.append(target)
+        subprocess.run(args, check=True)
     for num in expected:
         ioc_name = f"ioc-tst-unittest{num}"
         ioc_bld_path = children_dir / "build" / "iocBoot" / ioc_name
