@@ -1,7 +1,2 @@
 #!/bin/bash
-export PSPKG_RELEASE=controls-0.0.6
-export PATH=/usr/local/bin:/bin:/usr/bin
-unset LD_LIBRARY_PATH
-unset PYTHONPATH
-source $PSPKG_ROOT/etc/set_env.sh
-$0.py "$@"
+/cds/group/pcds/pyps/conda/py39/envs/pcds-5.9.1/bin/python $0.py "$@"
