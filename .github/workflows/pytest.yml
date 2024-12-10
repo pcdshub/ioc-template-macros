@@ -1,3 +1,7 @@
+# Custom simplest pytest action
+# Normally we should use pcds-ci-helpers, but that expects an installable package.
+# In the future this package could be refactored to be installable,
+# And then we'd switch this out for the standard ci suite
 name: pytest
 
 on:
