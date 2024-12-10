@@ -76,9 +76,8 @@ def generate_examples(
             f"Expected {ioc_deploy_path} and {examples_path} to be directories."
         )
     # Should be e.g. "/cds/group/pcds/epics/ioc/xpp/gigECam/R2.0.7"
+    # or e.g. "/cds/group/pcds/epics/ioc/common/bk-1697/R1.0.1/children"
     for template_ioc in iter_latest_template_iocs(ioc_deploy_path=ioc_deploy_path):
-        if template_ioc.parent.name in BANNED_IOC_TYPES:
-            continue
         for cfg_path in template_ioc.glob("*.cfg"):
             if cfg_path.stem in BANNED_IOC_NAMES:
                 continue
@@ -131,8 +130,13 @@ def iter_latest_template_iocs(
     except RuntimeError:
         ...
     else:
+        ioc_type = latest_version.parent.name
+        if ioc_type in BANNED_IOC_TYPES:
+            return
         if is_template_ioc(ioc_path=latest_version):
             return (yield latest_version)
+        elif is_template_ioc(ioc_path=latest_version / "children"):
+            return (yield latest_version / "children")
         else:
             return
     for subpath in ioc_deploy_path.iterdir():
@@ -274,10 +278,12 @@ def generate_expected(
         )
 
     # template_ioc is something like "/cds/group/pcds/epics/ioc/xpp/gigECam/R2.0.4"
+    # or, it can also be "/cds/group/pcds/epics/ioc/common/bk-1697/R1.0.1/children"
     for template_ioc in iter_latest_template_iocs(ioc_deploy_path=ioc_deploy_path):
-        variant = template_ioc.parent.name
-        if variant in BANNED_IOC_TYPES:
-            continue
+        if template_ioc.name == "children":
+            variant = template_ioc.parent.parent.name
+        else:
+            variant = template_ioc.parent.name
 
         built_iocs_subfolder = template_ioc / "build" / "iocBoot"
         for built_ioc in built_iocs_subfolder.iterdir():
