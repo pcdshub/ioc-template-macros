@@ -185,6 +185,9 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
         assert len(output_lines) == len(expected_lines), failure_info
         working_dir = os.getcwd()
         for output, expected in zip(output_lines, expected_lines):
+            # Preprocessing: /reg/g/ -> /cds/group/ for fair comparison
+            output = normalize_reg(output)
+            expected = normalize_reg(expected)
             if build_dir in output:
                 # Special case 1: our pytest build dir is not the real build dir
                 assert full_match_ignoring_test_artifact(
@@ -214,3 +217,10 @@ def full_match_ignoring_test_artifact(
         text = text.replace(special_char, f"\\{special_char}")
     text = f"^{text}$"
     return re.fullmatch(text, expected)
+
+
+def normalize_reg(text: str) -> str:
+    """
+    /reg/g/ -> /cds/group
+    """
+    return text.replace("/reg/g/", "/cds/group/")
