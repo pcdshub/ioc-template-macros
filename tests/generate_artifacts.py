@@ -116,6 +116,16 @@ def generate_examples(
 
 
 def chmod_uplusw(path: str | pathlib.Path) -> subprocess.CompletedProcess:
+    """
+    Make everything at path user-writable (recursively).
+
+    The python standard library has only annoying ways to do this.
+    The cli chmod tool is much more convenient.
+
+    This is used to make sure we can write to our own directories, since
+    the source files are often write-protected, and therefore are
+    still write-protected after we copy them.
+    """
     return subprocess.run(["chmod", "-R", "u+w", str(path)])
 
 
@@ -141,6 +151,13 @@ def log_copy(src: pathlib.Path, dst: pathlib.Path):
 def iter_latest_template_iocs(
     ioc_deploy_path: pathlib.Path,
 ) -> typing.Iterator[pathlib.Path]:
+    """
+    Yield latest versioned directories containing .cfg files.
+
+    The path either ends in a version number, e.g. R1.0.0,
+    or it ends in a version number followed by children,
+    e.g. R1.0.0/children.
+    """
     if not ioc_deploy_path.is_dir():
         return
     try:
