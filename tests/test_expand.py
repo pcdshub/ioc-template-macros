@@ -225,3 +225,47 @@ def normalize_reg(text: str) -> str:
     /reg/g/ -> /cds/group
     """
     return text.replace("/reg/g/", "/cds/group/")
+
+
+config_vars = {
+    "RELEASE": "/some/release/path",
+    "ENGINEER": "Mr. Beckhoff",
+    "LOCATION": "Hammer space",
+    "ASDF": "asdfasdf",
+}
+
+
+@pytest.mark.parametrize(
+    "config_var",
+    list(config_vars),
+)
+def test_expand_preprocessing(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture, config_var: str
+):
+    """
+    Before we fill a template, we can inspect the .cfg file using expand.py.
+
+    This has some pretty involved specifications in the source code that
+    involve including macros inside the config file itself.
+
+    I'll ignore all of this and test the most basic thing, which is actually
+    used in RULES_EXPAND: checking variables values from the cfg file.
+
+    This is typically used to get the RELEASE path:
+
+        IOC_APPL_TOP = $$(shell $(EXPAND) -c $(1).cfg RELEASE)
+
+    Often this is combined with the "UP" macro:
+    see test_keywords::test_standard_up_path where we test this macro.
+    """
+    cfg_file = tmp_path / "test-expand-processing.cfg"
+    with open(cfg_file, "w") as fd:
+        for key, value in config_vars.items():
+            fd.write(f"{key}={value}\n")
+
+    with cli_args(["expand", "-c", str(cfg_file), config_var]):
+        capsys.readouterr()
+        main()
+        outerr = capsys.readouterr()
+
+    assert outerr.out.strip() == config_vars[config_var]
