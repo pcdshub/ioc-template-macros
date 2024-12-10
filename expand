@@ -1,2 +1,8 @@
 #!/bin/bash
-/cds/group/pcds/pyps/conda/py39/envs/pcds-5.9.1/bin/python $0.py "$@"
+PYTHON=/cds/group/pcds/pyps/conda/py39/envs/pcds-5.9.1/bin/python
+if [ ! -x "${PYTHON}" ]; then
+    # Fallback for other filesystems, should be OK
+    # Mostly for CI
+    PYTHON=python3
+fi
+$PYTHON $0.py "$@"
