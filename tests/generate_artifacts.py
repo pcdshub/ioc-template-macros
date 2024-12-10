@@ -29,6 +29,9 @@ BANNED_IOC_TYPES = [
     "leviton",  # renamed to pdu_snmp, also similar name typo hell
     "Leviton",  # renamed to pdu_snmp, also similar name typo hell
     "Levitons",  # renamed to pdu_snmp, also similar name typo hell
+    "optics-notepad",  # renamed to optics-pitch-notepad
+    "topas",  # latest release broken (failed build), not deployed in iocmanager
+    "tricatt",  # typo (tricam) and failed build
 ]
 # Special cases: only for IOCs whose latest versions have build errors!
 BANNED_IOC_NAMES = [
@@ -93,6 +96,16 @@ def generate_examples(
             examples_target = examples_path / variant
             examples_target.mkdir(exist_ok=True)
             log_copy(src=cfg_path, dst=examples_target)
+            # We need to edit the file in place if it has $$UP(PATH) as its release
+            # Since the original path had the context for the absolute release path
+            new_file = examples_target / cfg_path.name
+            with open(new_file, "r") as fd:
+                text = fd.read()
+            if "$$UP(PATH)" in text:
+                new_text = text.replace("$$UP(PATH)", str(release_path))
+                chmod_uplusw(path=new_file)
+                with open(new_file, "w") as fd:
+                    fd.write(new_text)
 
     chmod_uplusw(path=examples_path)
 
@@ -174,6 +187,9 @@ def get_version_tuple(version_str: str) -> tuple[int, int, int]:
     """
     Convert a version string like R2.0.0 to a tuple for easy comparisons.
     """
+    # Avoid cases like ek9000 which otherwise parse to version 9000
+    if "." not in version_str:
+        raise ValueError(f"{version_str} is not a valid version.")
     orig_ver_str = version_str
     # Remove leading v, V, r, R
     while version_str and version_str[0].isalpha():
@@ -208,7 +224,11 @@ def get_release_path(cfg_file: pathlib.Path) -> pathlib.Path:
     # Should be e.g. "/cds/group/pcds/epics/ioc/common/gigECam/R5.0.4"
     if release_dir is None:
         raise InvalidReleaseError
-    release_path = pathlib.Path(release_dir)
+    # Special case: cfg file in children folder refers to parent dir via macro
+    if release_dir == "$$UP(PATH)":
+        release_path = cfg_file.parent.parent
+    else:
+        release_path = pathlib.Path(release_dir)
     try:
         get_version_tuple(release_path.name)
     except ValueError as exc:
@@ -317,6 +337,7 @@ if __name__ == "__main__":
     expected_path = pathlib.Path(__file__).parent / "expected"
 
     areas = [
+        "common",
         "cxi",
         "det",
         "kfe",
