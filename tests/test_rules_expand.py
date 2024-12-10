@@ -10,13 +10,13 @@ from .conftest import pushd
 @pytest.mark.parametrize(
     "target,expected",
     [
-        ("ioc-tst-unittest1", [1]),
-        ("ioc-tst-unittest2", [2]),
-        ("ioc-tst-unittest3", [3]),
-        ("", [1, 2, 3]),
+        ("ioc-tst-unittest1", "1"),
+        ("ioc-tst-unittest2", "2"),
+        ("ioc-tst-unittest3", "3"),
+        ("all", "123"),
     ],
 )
-def test_rules_expand(tmp_path: pathlib.Path, target: str, expected: list[int]):
+def test_rules_expand(tmp_path: pathlib.Path, target: str, expected: str):
     """
     Build one or more instance of ioc-tst-unittest.
 
@@ -34,7 +34,7 @@ def test_rules_expand(tmp_path: pathlib.Path, target: str, expected: list[int]):
         fd.write(f"include {rules_expand}\n")
     with pushd(children_dir):
         args = ["make"]
-        if target:
+        if target != "all":
             args.append(target)
         subprocess.run(args, check=True)
     for num in expected:
