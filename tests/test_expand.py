@@ -104,7 +104,8 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
     There is an additional undocumented "expand -c config_file name" syntax
     that initially appears unused, but it's actually used to generate a
     shell script named IOC_APPL_TOP that sets IOC_APPL_TOP to the RELEASE line.
-    Bizarre behavior. TODO add a unit test for that case.
+    Bizarre behavior. The overall goal for this is apparently to locate the
+    RELEASE directory in a preprocessing step. This will be tested separately.
 
     For the test here, we want to generate files one by one
     and check that they are correct (no regressions)

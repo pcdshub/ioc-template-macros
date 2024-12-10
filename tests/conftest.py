@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import contextlib
+import os
+import pathlib
 import sys
 
 
@@ -12,3 +16,14 @@ def cli_args(args):
     sys.argv = args
     yield
     sys.argv = prev_args
+
+
+@contextlib.contextmanager
+def pushd(directory: str | pathlib.Path):
+    """
+    Context manager for changing to a specific directory for a code block.
+    """
+    cwd = os.getcwd()
+    os.chdir(directory)
+    yield
+    os.chdir(cwd)
