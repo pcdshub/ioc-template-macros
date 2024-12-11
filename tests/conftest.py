@@ -5,6 +5,11 @@ import os
 import pathlib
 import sys
 
+if pathlib.Path("/cds/group/pcds").exists():
+    on_cds_nfs = True
+else:
+    on_cds_nfs = False
+
 
 @contextlib.contextmanager
 def cli_args(args):

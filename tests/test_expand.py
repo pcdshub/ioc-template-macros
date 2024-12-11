@@ -6,7 +6,7 @@ import pytest
 
 from expand import main
 
-from .conftest import cli_args
+from .conftest import cli_args, on_cds_nfs
 
 
 def get_release_dir(config_file: pathlib.Path) -> str:
@@ -134,6 +134,7 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
     iocname = config_file.stem
     build_dir = str(tmp_path)
     for template_file in template_files:
+        maybe_skip(template_file=template_file)
         if "ioc" in template:
             target_file = tmp_path / template_file.name.replace("ioc", iocname)
         else:
@@ -208,6 +209,22 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
                 )
             else:
                 assert output == expected, failure_info
+
+
+def maybe_skip(template_file: pathlib.Path) -> None:
+    """
+    Skip this test if we know it can't be done.
+
+    For example, tests that reference files from the CDS system can't be run
+    on CI. They need to have access to NFS.
+    """
+    if on_cds_nfs:
+        return
+    with open(template_file, "r") as fd:
+        if "$$INCLUDE" in fd.read():
+            pytest.skip(
+                reason="Real test with INCLUDE macro cannot be done without NFS."
+            )
 
 
 def full_match_ignoring_test_artifact(
