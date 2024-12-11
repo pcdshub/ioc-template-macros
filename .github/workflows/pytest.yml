@@ -1,0 +1,28 @@
+# Custom simplest pytest action
+# Normally we should use pcds-ci-helpers, but that expects an installable package.
+# In the future this package could be refactored to be installable,
+# And then we'd switch this out for the standard ci suite
+name: pytest
+
+on:
+  push:
+  pull_request:
+  release:
+    types:
+      - created
+
+jobs:
+  test:
+    name: "Python 3.9: (pip)"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.9"
+    - name: pip
+      run: pip install pytest
+    - name: pytest
+      run: pytest -v

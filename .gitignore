@@ -1,1 +1,6 @@
 realpath
+__pycache__
+core.*
+tests/common/*
+tests/examples/*
+tests/expected/*
