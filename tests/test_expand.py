@@ -29,10 +29,16 @@ def get_template_dir_from_release_dir(release_dir: str) -> pathlib.Path:
     long_path, common_name = os.path.split(long_path)
 
     # something like .../ioc-template-macros/tests/common/ims/R6.7.0
-    return pathlib.Path(__file__).parent / "common" / common_name / version_str
+    return (
+        pathlib.Path(__file__).parent
+        / "artifacts"
+        / "common"
+        / common_name
+        / version_str
+    )
 
 
-examples = pathlib.Path(__file__).parent / "examples"
+examples = pathlib.Path(__file__).parent / "artifacts" / "examples"
 configs = {pth.name: pth for pth in examples.glob("**/*.cfg")}
 template_globs = [
     "Makefile",
@@ -151,6 +157,7 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
             output_lines = fd.read().splitlines()
         expected_file = (
             pathlib.Path(__file__).parent
+            / "artifacts"
             / "expected"
             / common_name
             / iocname
@@ -159,7 +166,7 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
         if not expected_file.exists():
             # Oh no, maybe it's somewhere nearby! IOCs get renamed sometimes...
             glob_paths = list(
-                (pathlib.Path(__file__).parent / "expected").glob(
+                (pathlib.Path(__file__).parent / "artifacts" / "expected").glob(
                     f"**/{iocname}/{target_file.name}"
                 )
             )
