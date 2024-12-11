@@ -1,18 +1,22 @@
 ## ioc-template-macros
 `ioc-template-macros` is a repo that provides the following tools for building templated IOCs:
-- `RULES_EXPAND`: a file to include in a templated IOC `Makefile` such that when we `make` that IOC it uses this repo to expand the templates. A typical templated IOC `Makefile` is something like:
+
+- `expand`: a shell script that sets up a Python environment to run `expand.py`
+- `expand.py`: a python script that reads from config files and uses the data within them to expand IOC templates.
+- `RULES_EXPAND`: a file to include in a templated IOC `Makefile` such that when we `make` that IOC it uses this repo to expand the templates.
+
+A typical templated IOC `Makefile` is something like:
 ```
 # SLAC PCDS Makefile for building templated IOC instances
 IOC_CFG  += $(wildcard *.cfg)
 include /reg/g/pcds/controls/macro/RULES_EXPAND
 ```
-- `expand`: a shell script that sets up a Python environment to run `expand.py`
-- `expand.py`: a shell script that reads from config files and uses the data within them to expand IOC templates.
 
 ## API
 
-The `expand` script has two supported forms. There are others but they are not well understood by this readme writer:
+The `expand` script has two supported forms. There are others but they are not used in RULES_EXPAND.
 
+The two forms look like:
 ```
 expand -c CONFIG_FILE KEYWORD
 expand -c CONFIG_FILE TEMPLATE_FILE OUTPUT_FILE
