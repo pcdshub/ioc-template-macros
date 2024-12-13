@@ -6,7 +6,7 @@ import pytest
 
 from expand import main
 
-from .conftest import cli_args, on_cds_nfs
+from .conftest import ON_CDS_NFS, cli_args
 
 
 def get_release_dir(config_file: pathlib.Path) -> str:
@@ -134,7 +134,6 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
     iocname = config_file.stem
     build_dir = str(tmp_path)
     for template_file in template_files:
-        maybe_skip(template_file=template_file)
         if "ioc" in template:
             target_file = tmp_path / template_file.name.replace("ioc", iocname)
         else:
@@ -191,6 +190,9 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
             f"to make {target_file.name}. "
             f"Expected to match {expected_file}."
         )
+        if len(output_lines) != len(expected_lines):
+            # Maybe the line difference is from a missing $$INCLUDE file
+            maybe_skip_include(template_file=template_file)
         assert len(output_lines) == len(expected_lines), failure_info
         working_dir = os.getcwd()
         for output, expected in zip(output_lines, expected_lines):
@@ -211,14 +213,14 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
                 assert output == expected, failure_info
 
 
-def maybe_skip(template_file: pathlib.Path) -> None:
+def maybe_skip_include(template_file: pathlib.Path) -> None:
     """
     Skip this test if we know it can't be done.
 
     For example, tests that reference files from the CDS system can't be run
     on CI. They need to have access to NFS.
     """
-    if on_cds_nfs:
+    if ON_CDS_NFS:
         return
     with open(template_file, "r") as fd:
         if "$$INCLUDE" in fd.read():

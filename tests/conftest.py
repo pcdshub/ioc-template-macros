@@ -6,9 +6,9 @@ import pathlib
 import sys
 
 if pathlib.Path("/cds/group/pcds").exists():
-    on_cds_nfs = True
+    ON_CDS_NFS = True
 else:
-    on_cds_nfs = False
+    ON_CDS_NFS = False
 
 
 @contextlib.contextmanager
