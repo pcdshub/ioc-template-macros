@@ -6,7 +6,7 @@ import pytest
 
 from expand import main
 
-from .conftest import cli_args
+from .conftest import ON_CDS_NFS, cli_args
 
 
 def get_release_dir(config_file: pathlib.Path) -> str:
@@ -29,10 +29,16 @@ def get_template_dir_from_release_dir(release_dir: str) -> pathlib.Path:
     long_path, common_name = os.path.split(long_path)
 
     # something like .../ioc-template-macros/tests/common/ims/R6.7.0
-    return pathlib.Path(__file__).parent / "common" / common_name / version_str
+    return (
+        pathlib.Path(__file__).parent
+        / "artifacts"
+        / "common"
+        / common_name
+        / version_str
+    )
 
 
-examples = pathlib.Path(__file__).parent / "examples"
+examples = pathlib.Path(__file__).parent / "artifacts" / "examples"
 configs = {pth.name: pth for pth in examples.glob("**/*.cfg")}
 template_globs = [
     "Makefile",
@@ -151,6 +157,7 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
             output_lines = fd.read().splitlines()
         expected_file = (
             pathlib.Path(__file__).parent
+            / "artifacts"
             / "expected"
             / common_name
             / iocname
@@ -159,7 +166,7 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
         if not expected_file.exists():
             # Oh no, maybe it's somewhere nearby! IOCs get renamed sometimes...
             glob_paths = list(
-                (pathlib.Path(__file__).parent / "expected").glob(
+                (pathlib.Path(__file__).parent / "artifacts" / "expected").glob(
                     f"**/{iocname}/{target_file.name}"
                 )
             )
@@ -183,6 +190,9 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
             f"to make {target_file.name}. "
             f"Expected to match {expected_file}."
         )
+        if len(output_lines) != len(expected_lines):
+            # Maybe the line difference is from a missing $$INCLUDE file
+            maybe_skip_include(template_file=template_file)
         assert len(output_lines) == len(expected_lines), failure_info
         working_dir = os.getcwd()
         for output, expected in zip(output_lines, expected_lines):
@@ -201,6 +211,22 @@ def test_expand_full(tmp_path: pathlib.Path, cfg_name: str, template: str):
                 )
             else:
                 assert output == expected, failure_info
+
+
+def maybe_skip_include(template_file: pathlib.Path) -> None:
+    """
+    Skip this test if we know it can't be done.
+
+    For example, tests that reference files from the CDS system can't be run
+    on CI. They need to have access to NFS.
+    """
+    if ON_CDS_NFS:
+        return
+    with open(template_file, "r") as fd:
+        if "$$INCLUDE" in fd.read():
+            pytest.skip(
+                reason="Real test with INCLUDE macro cannot be done without NFS."
+            )
 
 
 def full_match_ignoring_test_artifact(

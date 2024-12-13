@@ -1,0 +1,3 @@
+[submodule "tests/artifacts"]
+	path = tests/artifacts
+	url = git@github.com:pcdshub/ioc-template-macros-artifacts.git
