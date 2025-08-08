@@ -5,7 +5,7 @@ RULES_EXPAND := $(lastword $(MAKEFILE_LIST))
 EXPAND       := $(dir $(RULES_EXPAND))/expand
 
 ifeq ($(BUILD_TOP),)
-BUILD_TOP = build
+export BUILD_TOP = build
 endif
 BUILD_TOP_ABS = $(abspath $(BUILD_TOP))
 
